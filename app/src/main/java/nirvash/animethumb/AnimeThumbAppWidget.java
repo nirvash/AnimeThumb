@@ -37,7 +37,12 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.anime_thumb_app_widget);
 
         Bitmap bitmap = getMediaImage(context);
-        views.setImageViewBitmap(R.id.imageView, bitmap);
+        if (bitmap != null) {
+            views.setImageViewBitmap(R.id.imageView, bitmap);
+        } else {
+            // 画像が見つからなかった時はデフォルトアイコンを表示しておく (見えなくならないように)
+            views.setImageViewResource(R.id.imageView, R.mipmap.ic_launcher_round);
+        }
 
         Intent intent = new Intent(context, AnimeThumbAppWidget.class);
         intent.setAction(ACTION_WIDGET_UPDATE);
@@ -110,8 +115,10 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-        mObserber = new MediaStoreObserver(new Handler(), context);
-        context.getContentResolver().registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, false, mObserber);
+        if (mObserber == null) {
+            mObserber = new MediaStoreObserver(new Handler(), context);
+            context.getContentResolver().registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, false, mObserber);
+        }
 
         // There may be multiple widgets active, so update all of them
         for (int appWidgetId : appWidgetIds) {
@@ -136,6 +143,10 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     @Override
     public void onDisabled(Context context) {
         // Enter relevant functionality for when the last widget is disabled
+        if (mObserber != null) {
+            context.getContentResolver().unregisterContentObserver(mObserber);
+            mObserber = null;
+        }
     }
 }
 
