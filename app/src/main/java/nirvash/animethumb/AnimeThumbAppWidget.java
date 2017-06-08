@@ -10,10 +10,14 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.View;
 import android.widget.RemoteViews;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -63,10 +67,13 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
         Bitmap bitmap = getMediaImage(context, appWidgetId);
         if (bitmap != null) {
+//            RoundDrawable drawable = new RoundDrawable(bitmap, 6.0f);
+//            bitmap = drawable.getBitmap();
             views.setImageViewBitmap(R.id.imageView, bitmap);
         } else {
             views.setImageViewResource(R.id.imageView, R.mipmap.ic_launcher_round);
         }
+
 
         Intent intent = new Intent(context, AnimeThumbAppWidget.class);
         intent.setAction(ACTION_WIDGET_UPDATE);
@@ -157,18 +164,79 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 e.printStackTrace();
             }
             if (bitmap != null && enableFaceDetect(context, widgetId)) {
-                FaceCrop crop = new FaceCrop(300, 300, 300, enableDebug(context, widgetId));
+                AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+                Bundle options = appWidgetManager.getAppWidgetOptions(widgetId);
+                int width = getWidth(context, options);
+                int height = getHeight(context, options);
+                float aspect = (float)height / (float)width;
+
+                FaceCrop crop = new FaceCrop(height, 300, 300, enableDebug(context, widgetId));
                 Rect rect = crop.getFaceRect(bitmap);
                 if (crop.isSuccess()) {
-                    BitmapWrapper inputImage = new BitmapWrapper(bitmap, false);
-                    BitmapWrapper cropImage = crop.cropFace(inputImage, 1.0f);
-                    inputImage.recycle();
-                    return cropImage.getBitmap();
+                    if (enableDebug(context,widgetId)) {
+                        BitmapWrapper out = crop.drawRegion(new BitmapWrapper(bitmap, false));
+                        bitmap = out.getBitmap();
+                    }
+                    adjustRect(rect, width, height, bitmap.getWidth(), bitmap.getHeight());
+                    Bitmap cropped = Bitmap.createBitmap(bitmap, rect.x, rect.y, rect.width, rect.height);
+                    return cropped;
                 }
             }
             return bitmap;
         }
         return null;
+    }
+
+    // ウィジェットのアスペクト比に合わせてクロップ領域を調整
+    private static void adjustRect(Rect rect, int width, int height, int maxWidth, int maxHeight) {
+        float widgetAspect = (float)width / (float) height;
+        float rectAspect = (float)rect.width / (float)rect.height;
+        if (widgetAspect > rectAspect) {
+            int w = (int)(rect.height * widgetAspect);
+            w = Math.min(maxWidth, w);
+            int diff = w - rect.width;
+            if (rect.x < diff / 2) {
+                rect.x = 0;
+            } else {
+                rect.x -= diff / 2;
+            }
+            rect.width = w;
+        } else {
+            int h = (int)(rect.width / widgetAspect);
+            h = Math.min(maxHeight, h);
+            int diff = h - rect.height;
+            if (rect.y < diff / 2) {
+                rect.y = 0;
+            } else {
+                rect.y -= diff / 2;
+            }
+            rect.height = h;
+        }
+    }
+
+    private static int getHeight(Context context, Bundle options) {
+        String KEY_HEIGHT = isPortrait(context) ?
+                AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT :
+                AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT;
+        int heightInDp = options.getInt(KEY_HEIGHT);
+        return (int)convertDp2Px(heightInDp, context);
+    }
+
+    private static int getWidth(Context context, Bundle options) {
+        String KEY_HEIGHT = isPortrait(context) ?
+                AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH :
+                AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH;
+        int widthInDp = options.getInt(KEY_HEIGHT);
+        return (int)convertDp2Px(widthInDp, context);
+    }
+
+    public static float convertDp2Px(float dp, Context context){
+        DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+        return dp * metrics.density;
+    }
+
+    private static boolean isPortrait(Context context) {
+        return context.getResources().getBoolean(R.bool.portrait);
     }
 
     private static boolean enableFaceDetect(Context context, int widgetId) {
@@ -182,11 +250,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-        if (mObserber == null) {
-            mObserber = new MediaStoreObserver(new Handler(), context);
-            context.getContentResolver().registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, mObserber);
-            context.getContentResolver().registerContentObserver(MediaStore.Images.Media.INTERNAL_CONTENT_URI, true, mObserber);
-        }
+
         checkOpenCV(context);
 
         // There may be multiple widgets active, so update all of them
@@ -211,6 +275,12 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     }
 
     private void checkOpenCV(Context context) {
+        if (mObserber == null) {
+            mObserber = new MediaStoreObserver(new Handler(), context);
+            context.getContentResolver().registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, mObserber);
+            context.getContentResolver().registerContentObserver(MediaStore.Images.Media.INTERNAL_CONTENT_URI, true, mObserber);
+        }
+
         if (mOpenCVLoaderCallback == null) {
             mOpenCVLoaderCallback = new MyLoaderCallback(context.getApplicationContext());
         }
@@ -232,6 +302,14 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             context.getContentResolver().unregisterContentObserver(mObserber);
             mObserber = null;
         }
+    }
+
+    @Override
+    public void onAppWidgetOptionsChanged (Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
+        // This is how you get your changes.
+        checkOpenCV(context);
+
+        updateAppWidget(context, appWidgetManager, appWidgetId);
     }
 }
 

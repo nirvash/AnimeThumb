@@ -136,7 +136,6 @@ public class FaceCrop {
     private static BitmapWrapper drawFaceRegions(List<Rect> rects, BitmapWrapper image, int color) {
         try {
             BitmapWrapper result = new BitmapWrapper(image.getBitmap().copy(Bitmap.Config.ARGB_8888, true), true);
-            image.recycle();
             Paint paint = new Paint();
             paint.setColor(color);
             paint.setStrokeWidth(4);
