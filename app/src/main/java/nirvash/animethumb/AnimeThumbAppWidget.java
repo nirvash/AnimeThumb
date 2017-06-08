@@ -61,7 +61,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         // Construct the RemoteViews object
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.anime_thumb_app_widget);
 
-        Bitmap bitmap = getMediaImage(context);
+        Bitmap bitmap = getMediaImage(context, appWidgetId);
         if (bitmap != null) {
             views.setImageViewBitmap(R.id.imageView, bitmap);
         } else {
@@ -147,7 +147,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     }
 
 
-    private static Bitmap getMediaImage(Context context) {
+    private static Bitmap getMediaImage(Context context, int widgetId) {
         Uri uri = getMediaImageUri(context);
         if (uri != null) {
             Bitmap bitmap = null;
@@ -156,11 +156,11 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            if (bitmap != null) {
-                FaceCrop crop = new FaceCrop(300, 300, 300);
+            if (bitmap != null && enableFaceDetect(context, widgetId)) {
+                FaceCrop crop = new FaceCrop(300, 300, 300, enableDebug(context, widgetId));
                 Rect rect = crop.getFaceRect(bitmap);
                 if (crop.isSuccess()) {
-                    BitmapWrapper inputImage = new BitmapWrapper(bitmap, true);
+                    BitmapWrapper inputImage = new BitmapWrapper(bitmap, false);
                     BitmapWrapper cropImage = crop.cropFace(inputImage, 1.0f);
                     inputImage.recycle();
                     return cropImage.getBitmap();
@@ -170,6 +170,15 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         }
         return null;
     }
+
+    private static boolean enableFaceDetect(Context context, int widgetId) {
+        return AnimeThumbAppWidgetConfigureActivity.loadPref(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_FACE_DETECT);
+    }
+
+    private static boolean enableDebug(Context context, int widgetId) {
+        return AnimeThumbAppWidgetConfigureActivity.loadPref(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_DEBUG);
+    }
+
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
@@ -186,11 +195,12 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         }
     }
 
+
     @Override
     public void onDeleted(Context context, int[] appWidgetIds) {
         // When the user deletes the widget, delete the preference associated with it.
         for (int appWidgetId : appWidgetIds) {
-            AnimeThumbAppWidgetConfigureActivity.deleteTitlePref(context, appWidgetId);
+            AnimeThumbAppWidgetConfigureActivity.deletePref(context, appWidgetId);
         }
         mObserber = null;
     }

@@ -39,6 +39,8 @@ public class FaceCrop {
     private int mMaxHeight;
     private float mWidth;
     private float mHeight;
+    private boolean mEnableDebug = false;
+
     private Rect mRect;
     private List<Rect> mRects = new ArrayList<>();
     private int mColor = Color.MAGENTA;
@@ -124,15 +126,17 @@ public class FaceCrop {
         return detector;
     }
 
-    public FaceCrop(int maxHeight, float w, float h) {
+    public FaceCrop(int maxHeight, float w, float h, boolean enableDebug) {
         this.mMaxHeight = maxHeight;
         this.mWidth = w;
         this.mHeight = h;
+        this.mEnableDebug = enableDebug;
     }
 
     private static BitmapWrapper drawFaceRegions(List<Rect> rects, BitmapWrapper image, int color) {
         try {
             BitmapWrapper result = new BitmapWrapper(image.getBitmap().copy(Bitmap.Config.ARGB_8888, true), true);
+            image.recycle();
             Paint paint = new Paint();
             paint.setColor(color);
             paint.setStrokeWidth(4);
@@ -170,7 +174,7 @@ public class FaceCrop {
 
     public BitmapWrapper drawRegion(BitmapWrapper bitmap) {
         if (mIsSuccess) {
-            if (BasicSettings.isDebug()) {
+            if (mEnableDebug) {
                 bitmap = drawFaceRegions(mRects, bitmap, mColor);
                 return bitmap;
             }
@@ -547,7 +551,7 @@ public class FaceCrop {
             float h = bitmap.getHeight();
             float bitmapAspect = h / w;
 
-            if (BasicSettings.isDebug()) {
+            if (mEnableDebug) {
                 bitmap = drawFaceRegions(mRects, bitmap, mColor);
             }
 
@@ -555,13 +559,11 @@ public class FaceCrop {
             if (bitmapAspect > aspect) {
                 r = addVPadding(r, bitmap.getBitmap(), (int) (w * aspect));
                 Bitmap resized = Bitmap.createBitmap(bitmap.getBitmap(), 0, r.y, (int) w, r.height);
-                bitmap.setBitmap(resized, true);
-                return bitmap;
+                return new BitmapWrapper(resized, true);
             } else {
                 r = addHPadding(r, bitmap.getBitmap(), (int) (h / aspect));
                 Bitmap resized = Bitmap.createBitmap(bitmap.getBitmap(), r.x, 0, r.width, (int) h);
-                bitmap.setBitmap(resized, true);
-                return bitmap;
+                return new BitmapWrapper(resized, true);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -624,7 +626,7 @@ public class FaceCrop {
     public static FaceCrop get(String imageUri, int maxHeight, float w, float h) {
         FaceCrop faceCrop = sFaceInfoMap.get(imageUri);
         if (faceCrop == null) {
-            faceCrop = new FaceCrop(maxHeight, w, h);
+            faceCrop = new FaceCrop(maxHeight, w, h, false);
             sFaceInfoMap.put(imageUri, faceCrop);
         }
         return faceCrop;
