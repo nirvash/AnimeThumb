@@ -9,6 +9,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -39,6 +44,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     public static final String ACTION_UPDATE = "nirvash.animethumb.ACTION_UPDATE";
 
     private MediaStoreObserver mObserber = null;
+    private boolean mIsOpenCvInitialized = false;
 
     private class MyLoaderCallback extends BaseLoaderCallback {
         public MyLoaderCallback(Context context) {
@@ -65,9 +71,16 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         // Construct the RemoteViews object
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.anime_thumb_app_widget);
 
-        Bitmap bitmap = getMediaImage(context, appWidgetId);
-        if (bitmap != null) {
-            views.setImageViewBitmap(R.id.imageView, bitmap);
+        Uri uri = getMediaImageUri(context);
+        BitmapWrapper bitmap = getMediaImage(uri, context, appWidgetId);
+        if (uri != null) {
+            if (bitmap != null) {
+                bitmap = cropImage(bitmap, context, appWidgetId);
+                bitmap = clipCorner(bitmap);
+                views.setImageViewBitmap(R.id.imageView, bitmap.getBitmap());
+            } else {
+                views.setImageViewBitmap(R.id.imageView, null);
+            }
         } else {
             views.setImageViewResource(R.id.imageView, R.mipmap.ic_launcher_round);
         }
@@ -87,6 +100,64 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
         // Instruct the widget manager to update the widget
         appWidgetManager.updateAppWidget(appWidgetId, views);
+    }
+
+    private static BitmapWrapper clipCorner(BitmapWrapper bitmap) {
+        Bitmap dst = Bitmap.createBitmap((int)bitmap.getWidth(), (int)bitmap.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(dst);
+        Paint paint = new Paint();
+        paint.setAntiAlias(true);
+        paint.setFilterBitmap(true);
+        c.drawARGB(0, 0, 0, 0);
+        paint.setColor(0xffffffff);
+        RectF rect = new RectF(0, 0, bitmap.getWidth(), bitmap.getHeight());
+        c.drawRoundRect(rect, 30, 30, paint);
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+        c.drawBitmap(bitmap.getBitmap(), 0, 0, paint);
+        bitmap.recycle();
+        return new BitmapWrapper(dst, true);
+    }
+
+    // Widget の大きさに合わせてクロップを行う
+    private static BitmapWrapper cropImage(BitmapWrapper bitmap, Context context, int widgetId) {
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+        Bundle options = appWidgetManager.getAppWidgetOptions(widgetId);
+        int width = getWidth(context, options);
+        int height = getHeight(context, options);
+        int imageWidth = (int)bitmap.getWidth();
+        int imageHeight = (int)bitmap.getHeight();
+
+        if (width == 0 || height == 0) {
+            return bitmap;
+        }
+
+        Rect srcRect = new Rect(0, 0, imageWidth, imageHeight);
+        if ((float)imageWidth  / (float)imageHeight > (float)width / (float)height) {
+            int w = imageHeight * width / height;
+            if (w < imageWidth) {
+                srcRect.width = w;
+                int diff = imageWidth - w;
+                srcRect.x += diff / 2;
+            } else {
+                return bitmap;
+            }
+        } else {
+            int h = imageWidth * height / width;
+            if (h < imageHeight) {
+                srcRect.height = h;
+                int diff = imageHeight - h;
+                srcRect.y += diff / 2;
+            } else {
+                return bitmap;
+            }
+        }
+
+        Log.d(TAG, String.format("srcRect(%s) iw: %d, ih: %d, w:%d, h:%d", srcRect.toString(), imageWidth, imageHeight, width, height));
+        Bitmap cropped = Bitmap.createBitmap(bitmap.getBitmap(), srcRect.x, srcRect.y, srcRect.width, srcRect.height);
+        bitmap.recycle();
+        Bitmap scaled = Bitmap.createScaledBitmap(cropped,  width, height, true);
+        cropped.recycle();
+        return new BitmapWrapper(scaled, true);
     }
 
     @Override
@@ -152,8 +223,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     }
 
 
-    private static Bitmap getMediaImage(Context context, int widgetId) {
-        Uri uri = getMediaImageUri(context);
+    private static BitmapWrapper getMediaImage(Uri uri, Context context, int widgetId) {
         if (uri != null) {
             Bitmap bitmap = null;
             try {
@@ -177,7 +247,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                     }
                     adjustRect(rect, width, height, bitmap.getWidth(), bitmap.getHeight());
                     Bitmap cropped = Bitmap.createBitmap(bitmap, rect.x, rect.y, rect.width, rect.height);
-                    return cropped;
+                    return new BitmapWrapper(cropped, true);
                 } else {
                     float bitmapAspect = (float)bitmap.getHeight() / (float)bitmap.getWidth();
                     if (bitmapAspect > 0.5f && bitmap.getHeight() > height) {
@@ -185,13 +255,15 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                         int h = (int)(bitmap.getHeight() * rate);
                         if (h  / (float)bitmap.getWidth() > (float)height / (float)width) {
                             Bitmap cropped = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), h);
-                            return cropped;
+                            return new BitmapWrapper(cropped, true);
                         }
                     }
 
                 }
             }
-            return bitmap;
+            if (bitmap != null) {
+                return new BitmapWrapper(bitmap, false);
+            }
         }
         return null;
     }
@@ -259,7 +331,6 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-
         checkOpenCV(context);
 
         // There may be multiple widgets active, so update all of them
@@ -294,13 +365,17 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             mOpenCVLoaderCallback = new MyLoaderCallback(context.getApplicationContext());
         }
 
-        // Enter relevant functionality for when the first widget is created
-        if (!OpenCVLoader.initDebug()) {
-            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, context.getApplicationContext(), mOpenCVLoaderCallback);
-        } else {
-            Log.d(TAG, "OpenCV library found inside package. Using it!");
-            mOpenCVLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        if (!mIsOpenCvInitialized) {
+            // Enter relevant functionality for when the first widget is created
+            if (!OpenCVLoader.initDebug()) {
+                Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+                OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, context.getApplicationContext(), mOpenCVLoaderCallback);
+                mIsOpenCvInitialized = true;
+            } else {
+                Log.d(TAG, "OpenCV library found inside package. Using it!");
+                mOpenCVLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+                mIsOpenCvInitialized = true;
+            }
         }
     }
 
