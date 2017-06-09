@@ -67,8 +67,6 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
         Bitmap bitmap = getMediaImage(context, appWidgetId);
         if (bitmap != null) {
-//            RoundDrawable drawable = new RoundDrawable(bitmap, 6.0f);
-//            bitmap = drawable.getBitmap();
             views.setImageViewBitmap(R.id.imageView, bitmap);
         } else {
             views.setImageViewResource(R.id.imageView, R.mipmap.ic_launcher_round);
@@ -180,6 +178,17 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                     adjustRect(rect, width, height, bitmap.getWidth(), bitmap.getHeight());
                     Bitmap cropped = Bitmap.createBitmap(bitmap, rect.x, rect.y, rect.width, rect.height);
                     return cropped;
+                } else {
+                    float bitmapAspect = (float)bitmap.getHeight() / (float)bitmap.getWidth();
+                    if (bitmapAspect > 0.5f && bitmap.getHeight() > height) {
+                        float rate = bitmapAspect > 1.5f ? 0.4f : 0.6f;
+                        int h = (int)(bitmap.getHeight() * rate);
+                        if (h  / (float)bitmap.getWidth() > (float)height / (float)width) {
+                            Bitmap cropped = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), h);
+                            return cropped;
+                        }
+                    }
+
                 }
             }
             return bitmap;
