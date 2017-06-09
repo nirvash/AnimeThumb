@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.CheckBox;
 import android.widget.EditText;
 
 /**
@@ -16,15 +17,25 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
 
     private static final String PREFS_NAME = "nirvash.animethumb.AnimeThumbAppWidget";
     private static final String PREF_PREFIX_KEY = "appwidget_";
+
+    public static final String KEY_ENABLE_DEBUG = "enable_debug";
+    public static final String KEY_ENABLE_FACE_DETECT = "enable_face_detect";
+
     int mAppWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
-    EditText mAppWidgetText;
+
+    CheckBox mEnableDebug;
+    CheckBox mEnableFaceDetect;
+
     View.OnClickListener mOnClickListener = new View.OnClickListener() {
         public void onClick(View v) {
             final Context context = AnimeThumbAppWidgetConfigureActivity.this;
 
             // When the button is clicked, store the string locally
-            String widgetText = mAppWidgetText.getText().toString();
-            saveTitlePref(context, mAppWidgetId, widgetText);
+            boolean enableDebug = mEnableDebug.isChecked();
+            savePref(context, mAppWidgetId, KEY_ENABLE_DEBUG, enableDebug);
+
+            boolean enableFaceDetect = mEnableFaceDetect.isChecked();
+            savePref(context, mAppWidgetId, KEY_ENABLE_FACE_DETECT, enableFaceDetect);
 
             // It is the responsibility of the configuration activity to update the app widget
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
@@ -43,27 +54,24 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
     }
 
     // Write the prefix to the SharedPreferences object for this widget
-    static void saveTitlePref(Context context, int appWidgetId, String text) {
+    static void savePref(Context context, int appWidgetId, String key, boolean value) {
         SharedPreferences.Editor prefs = context.getSharedPreferences(PREFS_NAME, 0).edit();
-        prefs.putString(PREF_PREFIX_KEY + appWidgetId, text);
+        prefs.putBoolean(PREF_PREFIX_KEY + appWidgetId + key, value);
         prefs.apply();
     }
 
     // Read the prefix from the SharedPreferences object for this widget.
     // If there is no preference saved, get the default from a resource
-    static String loadTitlePref(Context context, int appWidgetId) {
+    static boolean loadPref(Context context, int appWidgetId, String key) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, 0);
-        String titleValue = prefs.getString(PREF_PREFIX_KEY + appWidgetId, null);
-        if (titleValue != null) {
-            return titleValue;
-        } else {
-            return context.getString(R.string.appwidget_text);
-        }
+        boolean value = prefs.getBoolean(PREF_PREFIX_KEY + appWidgetId + key, true);
+        return value;
     }
 
-    static void deleteTitlePref(Context context, int appWidgetId) {
+    static void deletePref(Context context, int appWidgetId) {
         SharedPreferences.Editor prefs = context.getSharedPreferences(PREFS_NAME, 0).edit();
-        prefs.remove(PREF_PREFIX_KEY + appWidgetId);
+        prefs.remove(PREF_PREFIX_KEY + appWidgetId + KEY_ENABLE_DEBUG);
+        prefs.remove(PREF_PREFIX_KEY + appWidgetId + KEY_ENABLE_FACE_DETECT);
         prefs.apply();
     }
 
@@ -76,7 +84,8 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
         setResult(RESULT_CANCELED);
 
         setContentView(R.layout.anime_thumb_app_widget_configure);
-        mAppWidgetText = (EditText) findViewById(R.id.appwidget_text);
+        mEnableDebug = (CheckBox) findViewById(R.id.checkBoxDebug);
+        mEnableFaceDetect = (CheckBox) findViewById(R.id.checkBoxFaceDetect);
         findViewById(R.id.add_button).setOnClickListener(mOnClickListener);
 
         // Find the widget id from the intent.
@@ -93,7 +102,8 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
             return;
         }
 
-        mAppWidgetText.setText(loadTitlePref(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId));
+        mEnableDebug.setChecked(loadPref(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_DEBUG));
+        mEnableFaceDetect.setChecked(loadPref(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_FACE_DETECT));
     }
 }
 
