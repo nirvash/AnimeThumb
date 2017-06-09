@@ -32,6 +32,8 @@ import org.opencv.core.Rect;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Implementation of App Widget functionality.
@@ -47,6 +49,26 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     private boolean mIsOpenCvInitialized = false;
 
     private class MyLoaderCallback extends BaseLoaderCallback {
+        private CountDownLatch mLatch = null;
+
+        public void initLatch() {
+            if (mLatch != null) {
+                mLatch.countDown();
+            }
+            mLatch = new CountDownLatch(1);
+        }
+
+        public void waitLatch() {
+            if (mLatch != null) {
+                try {
+                    mLatch.await(1000, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                mLatch = null;
+            }
+        }
+
         public MyLoaderCallback(Context context) {
             super(context);
         }
@@ -56,9 +78,15 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS:
                     FaceCrop.initFaceDetector(mAppContext);
+                    if (mLatch != null) {
+                        mLatch.countDown();
+                    }
                     break;
                 default:
                     super.onManagerConnected(status);
+                    if (mLatch != null) {
+                        mLatch.countDown();
+                    }
                     break;
             }
         }
@@ -80,6 +108,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 views.setImageViewBitmap(R.id.imageView, bitmap.getBitmap());
             } else {
                 views.setImageViewBitmap(R.id.imageView, null);
+                broadcastUpdate(context, appWidgetManager);
             }
         } else {
             views.setImageViewResource(R.id.imageView, R.mipmap.ic_launcher_round);
@@ -170,13 +199,18 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             Uri uri = getMediaImageUri(context);
             Intent launchIntent = new Intent(Intent.ACTION_VIEW, uri);
             context.startActivity(launchIntent);
+            broadcastUpdate(context, appWidgetManager); // ついでに更新もかける
         } else if (ACTION_UPDATE.equals(intent.getAction())) {
-            ComponentName component = new ComponentName(context, AnimeThumbAppWidget.class);
-            int[] appWidgetIds = appWidgetManager.getAppWidgetIds(component);
-            Intent update = new Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-            update.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds);
-            context.sendBroadcast(update);
+            broadcastUpdate(context, appWidgetManager);
         }
+    }
+
+    static private void broadcastUpdate(Context context, AppWidgetManager appWidgetManager) {
+        ComponentName component = new ComponentName(context, AnimeThumbAppWidget.class);
+        int[] appWidgetIds = appWidgetManager.getAppWidgetIds(component);
+        Intent update = new Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+        update.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds);
+        context.sendBroadcast(update);
     }
 
     static class MediaInfo {
@@ -369,7 +403,9 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             // Enter relevant functionality for when the first widget is created
             if (!OpenCVLoader.initDebug()) {
                 Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+                mOpenCVLoaderCallback.initLatch();
                 OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, context.getApplicationContext(), mOpenCVLoaderCallback);
+                mOpenCVLoaderCallback.waitLatch();
                 mIsOpenCvInitialized = true;
             } else {
                 Log.d(TAG, "OpenCV library found inside package. Using it!");

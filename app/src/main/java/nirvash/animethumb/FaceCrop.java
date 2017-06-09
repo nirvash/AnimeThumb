@@ -225,13 +225,13 @@ public class FaceCrop {
 
         mIsFirst = false;
         DetectorConf[] confs = new DetectorConf[] {
-                new DetectorConf(sFaceDetectorAnimeFace,   0, 1.09f, 3, new Size(40, 40), Color.MAGENTA, false, "A"),
-                new DetectorConf(sFaceDetectorAnimeFace,  10, 1.09f, 3, new Size(40, 40), Color.MAGENTA, false, "A10"),
-                new DetectorConf(sFaceDetectorAnimeFace, -10, 1.09f, 3,  new Size(40, 40),Color.MAGENTA, false, "A-10"),
-                new DetectorConf(sFaceDetectorAnimeProfileFace, 0, 1.1f, 2,  new Size(40, 40),Color.BLACK, false, "AP"),
-                new DetectorConf(sFaceDetectorAnimeProfileFace, 0, 1.1f, 2,  new Size(40, 40),Color.BLACK, true, "APF"),
-                new DetectorConf(sFaceDetectorFace,   0, 1.09f, 3,  new Size(40, 40),Color.BLUE, false, "F"),
-                new DetectorConf(sFaceDetector_Cat,   0, 1.09f, 3, new Size(40, 40), Color.BLUE, false, "C")
+                new DetectorConf(sFaceDetectorAnimeFace,   0, 1.09f, 3, new Size(100, 100), Color.MAGENTA, false, "A"),
+                new DetectorConf(sFaceDetectorAnimeFace,  10, 1.09f, 3, new Size(100, 100), Color.MAGENTA, false, "A10"),
+                new DetectorConf(sFaceDetectorAnimeFace, -10, 1.09f, 3,  new Size(100, 100),Color.MAGENTA, false, "A-10"),
+                new DetectorConf(sFaceDetectorAnimeProfileFace, 0, 1.1f, 2,  new Size(100, 100),Color.BLACK, false, "AP"),
+                new DetectorConf(sFaceDetectorAnimeProfileFace, 0, 1.1f, 2,  new Size(100, 100),Color.BLACK, true, "APF"),
+                new DetectorConf(sFaceDetectorFace,   0, 1.09f, 3,  new Size(100, 100),Color.BLUE, false, "F"),
+                new DetectorConf(sFaceDetector_Cat,   0, 1.09f, 3, new Size(100, 100), Color.BLUE, false, "C")
         };
 
         try {
