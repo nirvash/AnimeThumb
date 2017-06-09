@@ -108,7 +108,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 views.setImageViewBitmap(R.id.imageView, bitmap.getBitmap());
             } else {
                 views.setImageViewBitmap(R.id.imageView, null);
-                broadcastUpdate(context, appWidgetManager);
+                broadcastUpdate(context);
             }
         } else {
             views.setImageViewResource(R.id.imageView, R.mipmap.ic_launcher_round);
@@ -194,18 +194,18 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         super.onReceive(context, intent);
         Log.d(TAG, "onReceive");
 
-        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
         if (ACTION_WIDGET_UPDATE.equals(intent.getAction())) {
             Uri uri = getMediaImageUri(context);
             Intent launchIntent = new Intent(Intent.ACTION_VIEW, uri);
             context.startActivity(launchIntent);
-            broadcastUpdate(context, appWidgetManager); // ついでに更新もかける
+            broadcastUpdate(context); // ついでに更新もかける
         } else if (ACTION_UPDATE.equals(intent.getAction())) {
-            broadcastUpdate(context, appWidgetManager);
+            broadcastUpdate(context);
         }
     }
 
-    static private void broadcastUpdate(Context context, AppWidgetManager appWidgetManager) {
+    static public void broadcastUpdate(Context context) {
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
         ComponentName component = new ComponentName(context, AnimeThumbAppWidget.class);
         int[] appWidgetIds = appWidgetManager.getAppWidgetIds(component);
         Intent update = new Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
@@ -380,7 +380,6 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         for (int appWidgetId : appWidgetIds) {
             AnimeThumbAppWidgetConfigureActivity.deletePref(context, appWidgetId);
         }
-        mObserber = null;
     }
 
     @Override

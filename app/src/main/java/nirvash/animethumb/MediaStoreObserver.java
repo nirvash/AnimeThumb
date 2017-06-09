@@ -29,9 +29,11 @@ public class MediaStoreObserver extends ContentObserver {
         Log.d(TAG, "onChage");
 
         if (mContext != null) {
-            Intent intent = new Intent(mContext, AnimeThumbAppWidget.class);
+/*            Intent intent = new Intent(mContext, AnimeThumbAppWidget.class);
             intent.setAction(AnimeThumbAppWidget.ACTION_UPDATE);
             mContext.sendBroadcast(intent);
+            */
+            AnimeThumbAppWidget.broadcastUpdate(mContext);
         }
 
     }
