@@ -9,6 +9,9 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.TextView;
+
+import org.w3c.dom.Text;
 
 /**
  * The configuration screen for the {@link AnimeThumbAppWidget AnimeThumbAppWidget} AppWidget.
@@ -20,11 +23,13 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
 
     public static final String KEY_ENABLE_DEBUG = "enable_debug";
     public static final String KEY_ENABLE_FACE_DETECT = "enable_face_detect";
+    public static final String KEY_MIN_DETECT_SIZE = "min_detect_size";
 
     int mAppWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
 
     CheckBox mEnableDebug;
     CheckBox mEnableFaceDetect;
+    EditText mMinDetectSize;
 
     View.OnClickListener mOnClickListener = new View.OnClickListener() {
         public void onClick(View v) {
@@ -36,6 +41,9 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
 
             boolean enableFaceDetect = mEnableFaceDetect.isChecked();
             savePref(context, mAppWidgetId, KEY_ENABLE_FACE_DETECT, enableFaceDetect);
+
+            int minDetectSize = Integer.parseInt(mMinDetectSize.getText().toString());
+            savePref(context, mAppWidgetId, KEY_MIN_DETECT_SIZE, minDetectSize);
 
             // It is the responsibility of the configuration activity to update the app widget
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
@@ -60,18 +68,33 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
         prefs.apply();
     }
 
+    static void savePref(Context context, int appWidgetId, String key, int value) {
+        SharedPreferences.Editor prefs = context.getSharedPreferences(PREFS_NAME, 0).edit();
+        prefs.putInt(PREF_PREFIX_KEY + appWidgetId + key, value);
+        prefs.apply();
+    }
+
+
     // Read the prefix from the SharedPreferences object for this widget.
     // If there is no preference saved, get the default from a resource
-    static boolean loadPref(Context context, int appWidgetId, String key) {
+    static boolean loadPrefString(Context context, int appWidgetId, String key) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, 0);
         boolean value = prefs.getBoolean(PREF_PREFIX_KEY + appWidgetId + key, true);
         return value;
     }
 
+    static int loadPrefInt(Context context, int appWidgetId, String key) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, 0);
+        int value = prefs.getInt(PREF_PREFIX_KEY + appWidgetId + key, 100);
+        return value;
+    }
+
+
     static void deletePref(Context context, int appWidgetId) {
         SharedPreferences.Editor prefs = context.getSharedPreferences(PREFS_NAME, 0).edit();
         prefs.remove(PREF_PREFIX_KEY + appWidgetId + KEY_ENABLE_DEBUG);
         prefs.remove(PREF_PREFIX_KEY + appWidgetId + KEY_ENABLE_FACE_DETECT);
+        prefs.remove(PREF_PREFIX_KEY + appWidgetId + KEY_MIN_DETECT_SIZE);
         prefs.apply();
     }
 
@@ -86,6 +109,7 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
         setContentView(R.layout.anime_thumb_app_widget_configure);
         mEnableDebug = (CheckBox) findViewById(R.id.checkBoxDebug);
         mEnableFaceDetect = (CheckBox) findViewById(R.id.checkBoxFaceDetect);
+        mMinDetectSize = (EditText) findViewById(R.id.editTextSize);
         findViewById(R.id.add_button).setOnClickListener(mOnClickListener);
 
         // Find the widget id from the intent.
@@ -102,8 +126,9 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
             return;
         }
 
-        mEnableDebug.setChecked(loadPref(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_DEBUG));
-        mEnableFaceDetect.setChecked(loadPref(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_FACE_DETECT));
+        mEnableDebug.setChecked(loadPrefString(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_DEBUG));
+        mEnableFaceDetect.setChecked(loadPrefString(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_FACE_DETECT));
+        mMinDetectSize.setText(Integer.toString(loadPrefInt(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_MIN_DETECT_SIZE)));
     }
 }
 

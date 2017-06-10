@@ -14,15 +14,12 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.View;
 import android.widget.RemoteViews;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -30,7 +27,6 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Rect;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -272,7 +268,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 int height = getHeight(context, options);
                 float aspect = (float)height / (float)width;
 
-                FaceCrop crop = new FaceCrop(height, 300, 300, enableDebug(context, widgetId));
+                FaceCrop crop = new FaceCrop(height, 300, 300, enableDebug(context, widgetId), getMinDetectSize(context, widgetId));
                 Rect rect = crop.getFaceRect(bitmap);
                 if (crop.isSuccess()) {
                     if (enableDebug(context,widgetId)) {
@@ -355,11 +351,15 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     }
 
     private static boolean enableFaceDetect(Context context, int widgetId) {
-        return AnimeThumbAppWidgetConfigureActivity.loadPref(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_FACE_DETECT);
+        return AnimeThumbAppWidgetConfigureActivity.loadPrefString(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_FACE_DETECT);
     }
 
     private static boolean enableDebug(Context context, int widgetId) {
-        return AnimeThumbAppWidgetConfigureActivity.loadPref(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_DEBUG);
+        return AnimeThumbAppWidgetConfigureActivity.loadPrefString(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_DEBUG);
+    }
+
+    private static int getMinDetectSize(Context context, int widgetId) {
+        return AnimeThumbAppWidgetConfigureActivity.loadPrefInt(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_MIN_DETECT_SIZE);
     }
 
 
