@@ -41,7 +41,6 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     public static final String ACTION_WIDGET_UPDATE = "nirvash.animethumb.ACTION_WIDGET_UPDATE";
     public static final String ACTION_UPDATE = "nirvash.animethumb.ACTION_UPDATE";
 
-    private MediaStoreObserver mObserber = null;
     private boolean mIsOpenCvInitialized = false;
 
     private class MyLoaderCallback extends BaseLoaderCallback {
@@ -125,6 +124,8 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
         // Instruct the widget manager to update the widget
         appWidgetManager.updateAppWidget(appWidgetId, views);
+
+
     }
 
     private static BitmapWrapper clipCorner(BitmapWrapper bitmap) {
@@ -367,6 +368,9 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         checkOpenCV(context);
 
+        Intent serviceIntent = new Intent(context, MyService.class);
+        context.startService(serviceIntent);
+
         // There may be multiple widgets active, so update all of them
         for (int appWidgetId : appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId);
@@ -388,12 +392,6 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     }
 
     private void checkOpenCV(Context context) {
-        if (mObserber == null) {
-            mObserber = new MediaStoreObserver(new Handler(), context);
-            context.getContentResolver().registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, mObserber);
-            context.getContentResolver().registerContentObserver(MediaStore.Images.Media.INTERNAL_CONTENT_URI, true, mObserber);
-        }
-
         if (mOpenCVLoaderCallback == null) {
             mOpenCVLoaderCallback = new MyLoaderCallback(context.getApplicationContext());
         }
@@ -416,11 +414,8 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
     @Override
     public void onDisabled(Context context) {
-        // Enter relevant functionality for when the last widget is disabled
-        if (mObserber != null) {
-            context.getContentResolver().unregisterContentObserver(mObserber);
-            mObserber = null;
-        }
+        Intent serviceIntent = new Intent(context, MyService.class);
+        context.stopService(serviceIntent);
     }
 
     @Override
