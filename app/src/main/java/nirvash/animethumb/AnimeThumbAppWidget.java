@@ -203,7 +203,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         }
     }
 
-    private void broadcastUpdate(Context context) {
+    static public void broadcastUpdate(Context context) {
         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
         ComponentName component = new ComponentName(context, AnimeThumbAppWidget.class);
         int[] appWidgetIds = appWidgetManager.getAppWidgetIds(component);
