@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import org.w3c.dom.Text;
@@ -27,8 +28,8 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
 
     int mAppWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
 
-    CheckBox mEnableDebug;
-    CheckBox mEnableFaceDetect;
+    Switch mEnableDebug;
+    Switch mEnableFaceDetect;
     EditText mMinDetectSize;
 
     View.OnClickListener mOnClickListener = new View.OnClickListener() {
@@ -107,8 +108,8 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
         setResult(RESULT_CANCELED);
 
         setContentView(R.layout.anime_thumb_app_widget_configure);
-        mEnableDebug = (CheckBox) findViewById(R.id.checkBoxDebug);
-        mEnableFaceDetect = (CheckBox) findViewById(R.id.checkBoxFaceDetect);
+        mEnableDebug = (Switch) findViewById(R.id.switchEnableDebug);
+        mEnableFaceDetect = (Switch) findViewById(R.id.switchEnableFaceDetect);
         mMinDetectSize = (EditText) findViewById(R.id.editTextSize);
         findViewById(R.id.add_button).setOnClickListener(mOnClickListener);
 
