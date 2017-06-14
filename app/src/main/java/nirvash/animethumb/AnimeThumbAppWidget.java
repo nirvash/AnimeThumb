@@ -165,18 +165,24 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         super.onReceive(context, intent);
         Log.d(TAG, "onReceive");
 
-        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
         if (ACTION_WIDGET_UPDATE.equals(intent.getAction())) {
             Uri uri = getMediaImageUri(context);
             Intent launchIntent = new Intent(Intent.ACTION_VIEW, uri);
             context.startActivity(launchIntent);
         } else if (ACTION_UPDATE.equals(intent.getAction())) {
-            ComponentName component = new ComponentName(context, AnimeThumbAppWidget.class);
-            int[] appWidgetIds = appWidgetManager.getAppWidgetIds(component);
-            Intent update = new Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-            update.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds);
-            context.sendBroadcast(update);
+            broadcastUpdateRequest(context);
+        } else if (Intent.ACTION_CONFIGURATION_CHANGED.equals(intent.getAction())) {
+            broadcastUpdateRequest(context);
         }
+    }
+
+    private void broadcastUpdateRequest(Context context) {
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+        ComponentName component = new ComponentName(context, AnimeThumbAppWidget.class);
+        int[] appWidgetIds = appWidgetManager.getAppWidgetIds(component);
+        Intent update = new Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+        update.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds);
+        context.sendBroadcast(update);
     }
 
     static class MediaInfo {
