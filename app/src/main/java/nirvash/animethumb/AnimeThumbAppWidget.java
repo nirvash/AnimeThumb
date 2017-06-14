@@ -14,15 +14,12 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.View;
 import android.widget.RemoteViews;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -30,8 +27,9 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Rect;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Implementation of App Widget functionality.
@@ -43,10 +41,29 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     public static final String ACTION_WIDGET_UPDATE = "nirvash.animethumb.ACTION_WIDGET_UPDATE";
     public static final String ACTION_UPDATE = "nirvash.animethumb.ACTION_UPDATE";
 
-    private MediaStoreObserver mObserber = null;
     private boolean mIsOpenCvInitialized = false;
 
     private class MyLoaderCallback extends BaseLoaderCallback {
+        private CountDownLatch mLatch = null;
+
+        public void initLatch() {
+            if (mLatch != null) {
+                mLatch.countDown();
+            }
+            mLatch = new CountDownLatch(1);
+        }
+
+        public void waitLatch() {
+            if (mLatch != null) {
+                try {
+                    mLatch.await(1000, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                mLatch = null;
+            }
+        }
+
         public MyLoaderCallback(Context context) {
             super(context);
         }
@@ -56,9 +73,15 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS:
                     FaceCrop.initFaceDetector(mAppContext);
+                    if (mLatch != null) {
+                        mLatch.countDown();
+                    }
                     break;
                 default:
                     super.onManagerConnected(status);
+                    if (mLatch != null) {
+                        mLatch.countDown();
+                    }
                     break;
             }
         }
@@ -80,6 +103,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 views.setImageViewBitmap(R.id.imageView, bitmap.getBitmap());
             } else {
                 views.setImageViewBitmap(R.id.imageView, null);
+                broadcastUpdate(context);
             }
         } else {
             views.setImageViewResource(R.id.imageView, R.mipmap.ic_launcher_round);
@@ -100,6 +124,8 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
         // Instruct the widget manager to update the widget
         appWidgetManager.updateAppWidget(appWidgetId, views);
+
+
     }
 
     private static BitmapWrapper clipCorner(BitmapWrapper bitmap) {
@@ -169,14 +195,15 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             Uri uri = getMediaImageUri(context);
             Intent launchIntent = new Intent(Intent.ACTION_VIEW, uri);
             context.startActivity(launchIntent);
+            broadcastUpdate(context); // ついでに更新もかける
         } else if (ACTION_UPDATE.equals(intent.getAction())) {
-            broadcastUpdateRequest(context);
+            broadcastUpdate(context);
         } else if (Intent.ACTION_CONFIGURATION_CHANGED.equals(intent.getAction())) {
-            broadcastUpdateRequest(context);
+            broadcastUpdate(context);
         }
     }
 
-    private void broadcastUpdateRequest(Context context) {
+    private void broadcastUpdate(Context context) {
         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
         ComponentName component = new ComponentName(context, AnimeThumbAppWidget.class);
         int[] appWidgetIds = appWidgetManager.getAppWidgetIds(component);
@@ -244,7 +271,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 int height = getHeight(context, options);
                 float aspect = (float)height / (float)width;
 
-                FaceCrop crop = new FaceCrop(height, 300, 300, enableDebug(context, widgetId));
+                FaceCrop crop = new FaceCrop(height, 300, 300, enableDebug(context, widgetId), getMinDetectSize(context, widgetId));
                 Rect rect = crop.getFaceRect(bitmap);
                 if (crop.isSuccess()) {
                     if (enableDebug(context,widgetId)) {
@@ -327,17 +354,24 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     }
 
     private static boolean enableFaceDetect(Context context, int widgetId) {
-        return AnimeThumbAppWidgetConfigureActivity.loadPref(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_FACE_DETECT);
+        return AnimeThumbAppWidgetConfigureActivity.loadPrefString(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_FACE_DETECT);
     }
 
     private static boolean enableDebug(Context context, int widgetId) {
-        return AnimeThumbAppWidgetConfigureActivity.loadPref(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_DEBUG);
+        return AnimeThumbAppWidgetConfigureActivity.loadPrefString(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_DEBUG);
+    }
+
+    private static int getMinDetectSize(Context context, int widgetId) {
+        return AnimeThumbAppWidgetConfigureActivity.loadPrefInt(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_MIN_DETECT_SIZE);
     }
 
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         checkOpenCV(context);
+
+        Intent serviceIntent = new Intent(context, MyService.class);
+        context.startService(serviceIntent);
 
         // There may be multiple widgets active, so update all of them
         for (int appWidgetId : appWidgetIds) {
@@ -352,7 +386,6 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         for (int appWidgetId : appWidgetIds) {
             AnimeThumbAppWidgetConfigureActivity.deletePref(context, appWidgetId);
         }
-        mObserber = null;
     }
 
     @Override
@@ -361,12 +394,6 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     }
 
     private void checkOpenCV(Context context) {
-        if (mObserber == null) {
-            mObserber = new MediaStoreObserver(new Handler(), context);
-            context.getContentResolver().registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, mObserber);
-            context.getContentResolver().registerContentObserver(MediaStore.Images.Media.INTERNAL_CONTENT_URI, true, mObserber);
-        }
-
         if (mOpenCVLoaderCallback == null) {
             mOpenCVLoaderCallback = new MyLoaderCallback(context.getApplicationContext());
         }
@@ -375,7 +402,9 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             // Enter relevant functionality for when the first widget is created
             if (!OpenCVLoader.initDebug()) {
                 Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+                mOpenCVLoaderCallback.initLatch();
                 OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, context.getApplicationContext(), mOpenCVLoaderCallback);
+                mOpenCVLoaderCallback.waitLatch();
                 mIsOpenCvInitialized = true;
             } else {
                 Log.d(TAG, "OpenCV library found inside package. Using it!");
@@ -387,11 +416,8 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
     @Override
     public void onDisabled(Context context) {
-        // Enter relevant functionality for when the last widget is disabled
-        if (mObserber != null) {
-            context.getContentResolver().unregisterContentObserver(mObserber);
-            mObserber = null;
-        }
+        Intent serviceIntent = new Intent(context, MyService.class);
+        context.stopService(serviceIntent);
     }
 
     @Override

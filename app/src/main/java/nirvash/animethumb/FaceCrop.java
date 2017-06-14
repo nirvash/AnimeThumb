@@ -40,6 +40,7 @@ public class FaceCrop {
     private float mWidth;
     private float mHeight;
     private boolean mEnableDebug = false;
+    private int mMinDetectSize = 100;
 
     private Rect mRect;
     private List<Rect> mRects = new ArrayList<>();
@@ -126,11 +127,12 @@ public class FaceCrop {
         return detector;
     }
 
-    public FaceCrop(int maxHeight, float w, float h, boolean enableDebug) {
+    public FaceCrop(int maxHeight, float w, float h, boolean enableDebug, int minDetectSize) {
         this.mMaxHeight = maxHeight;
         this.mWidth = w;
         this.mHeight = h;
         this.mEnableDebug = enableDebug;
+        this.mMinDetectSize = minDetectSize;
     }
 
     private static BitmapWrapper drawFaceRegions(List<Rect> rects, BitmapWrapper image, int color) {
@@ -224,14 +226,15 @@ public class FaceCrop {
         }
 
         mIsFirst = false;
+        Size minSize = new Size(mMinDetectSize, mMinDetectSize);
         DetectorConf[] confs = new DetectorConf[] {
-                new DetectorConf(sFaceDetectorAnimeFace,   0, 1.09f, 3, new Size(40, 40), Color.MAGENTA, false, "A"),
-                new DetectorConf(sFaceDetectorAnimeFace,  10, 1.09f, 3, new Size(40, 40), Color.MAGENTA, false, "A10"),
-                new DetectorConf(sFaceDetectorAnimeFace, -10, 1.09f, 3,  new Size(40, 40),Color.MAGENTA, false, "A-10"),
-                new DetectorConf(sFaceDetectorAnimeProfileFace, 0, 1.1f, 2,  new Size(40, 40),Color.BLACK, false, "AP"),
-                new DetectorConf(sFaceDetectorAnimeProfileFace, 0, 1.1f, 2,  new Size(40, 40),Color.BLACK, true, "APF"),
-                new DetectorConf(sFaceDetectorFace,   0, 1.09f, 3,  new Size(40, 40),Color.BLUE, false, "F"),
-                new DetectorConf(sFaceDetector_Cat,   0, 1.09f, 3, new Size(40, 40), Color.BLUE, false, "C")
+                new DetectorConf(sFaceDetectorAnimeFace,   0, 1.09f, 3, minSize, Color.MAGENTA, false, "A"),
+                new DetectorConf(sFaceDetectorAnimeFace,  10, 1.09f, 3, minSize, Color.MAGENTA, false, "A10"),
+                new DetectorConf(sFaceDetectorAnimeFace, -10, 1.09f, 3,  minSize,Color.MAGENTA, false, "A-10"),
+                new DetectorConf(sFaceDetectorAnimeProfileFace, 0, 1.1f, 2,  minSize,Color.BLACK, false, "AP"),
+                new DetectorConf(sFaceDetectorAnimeProfileFace, 0, 1.1f, 2,  minSize,Color.BLACK, true, "APF"),
+                new DetectorConf(sFaceDetectorFace,   0, 1.09f, 3, minSize,Color.BLUE, false, "F"),
+                new DetectorConf(sFaceDetector_Cat,   0, 1.09f, 3, minSize, Color.BLUE, false, "C")
         };
 
         try {
@@ -625,7 +628,7 @@ public class FaceCrop {
     public static FaceCrop get(String imageUri, int maxHeight, float w, float h) {
         FaceCrop faceCrop = sFaceInfoMap.get(imageUri);
         if (faceCrop == null) {
-            faceCrop = new FaceCrop(maxHeight, w, h, false);
+            faceCrop = new FaceCrop(maxHeight, w, h, false, 100);
             sFaceInfoMap.put(imageUri, faceCrop);
         }
         return faceCrop;
