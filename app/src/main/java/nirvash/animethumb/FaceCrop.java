@@ -7,6 +7,8 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.Log;
 
+import com.deploygate.sdk.DeployGate;
+
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -293,6 +295,7 @@ public class FaceCrop {
             if (conf.angle != 0 || scale != 1.0f || conf.flip) {
                 // 回転復元
                 for (Rect r : facesArray) {
+                    Rect tmp = new Rect(r.x, r.y, r.width, r.height);
                     if (scale != 1.0f) {
                         r.x /= scale;
                         r.y /= scale;
@@ -313,6 +316,14 @@ public class FaceCrop {
                     // 左右反転復元
                     if (conf.flip) {
                         r.x = (int)mWidth - r.x - r.width;
+                    }
+                    if (r.x < 0) {
+                        DeployGate.logWarn(String.format("getFaceRectImpl: r %s -> %s, scale %f, angle %f, flip %b", tmp.toString(), r.toString(), scale, conf.angle, conf.flip));
+                        r.x = 0;
+                    }
+                    if (r.y < 0) {
+                        DeployGate.logWarn(String.format("getFaceRectImpl: r %s -> %s, scale %f, angle %f, flip %b", tmp.toString(), r.toString(), scale, conf.angle, conf.flip));
+                        r.y = 0;
                     }
                 }
             }
