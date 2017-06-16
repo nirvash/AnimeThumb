@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">アニサム</string>
+    <string name="config_ok">OK</string>
+    <string name="configure">設定</string>
+    <string name="config_enable_debug">デバッグモード</string>
+    <string name="config_enable_face_detect">顔認識</string>
+    <string name="label_size">最小認識サイズ</string>
+</resources>

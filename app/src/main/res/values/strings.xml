@@ -1,9 +1,8 @@
 <resources>
     <string name="app_name">AnimeThumb</string>
-    <string name="appwidget_text">EXAMPLE</string>
     <string name="configure">Configure</string>
-    <string name="add_widget">Add widget</string>
-    <string name="config_check_debug">Enable Debug</string>
-    <string name="config_check_face_crop">Enable Face Crop</string>
     <string name="config_ok">OK</string>
+    <string name="label_size">Miniumu detect size</string>
+    <string name="config_enable_debug">Enable debug</string>
+    <string name="config_enable_face_detect">Enable face detect</string>
 </resources>

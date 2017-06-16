@@ -24,13 +24,13 @@
             android:id="@+id/switchEnableDebug"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Enable Debug" />
+            android:text="@string/config_enable_debug" />
 
         <Switch
             android:id="@+id/switchEnableFaceDetect"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Enable Face Detect" />
+            android:text="@string/config_enable_face_detect" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -43,7 +43,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="left|center_vertical"
                 android:layout_weight="1"
-                android:text="Size"
+                android:text="@string/label_size"
                 android:textSize="14sp" />
 
             <EditText
