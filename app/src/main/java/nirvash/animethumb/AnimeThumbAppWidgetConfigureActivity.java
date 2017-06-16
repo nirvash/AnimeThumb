@@ -6,9 +6,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -31,6 +34,8 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
     Switch mEnableDebug;
     Switch mEnableFaceDetect;
     EditText mMinDetectSize;
+    SeekBar mSeekBar;
+    boolean mFromApp = false;
 
     View.OnClickListener mOnClickListener = new View.OnClickListener() {
         public void onClick(View v) {
@@ -102,6 +107,8 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
+        final int MINSIZE_MAX = 300;
+        final int MINSIZE_STEP = 10;
 
         // Set the result to CANCELED.  This will cause the widget host to cancel
         // out of the widget placement if the user presses the back button.
@@ -111,7 +118,56 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
         mEnableDebug = (Switch) findViewById(R.id.switchEnableDebug);
         mEnableFaceDetect = (Switch) findViewById(R.id.switchEnableFaceDetect);
         mMinDetectSize = (EditText) findViewById(R.id.editTextSize);
+        mSeekBar = (SeekBar) findViewById(R.id.seekBar);
+        mSeekBar.setMax(MINSIZE_MAX / MINSIZE_STEP);
         findViewById(R.id.add_button).setOnClickListener(mOnClickListener);
+
+        mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser) {
+                    if (progress >= 0 && progress <= seekBar.getMax()) {
+                        String value = String.valueOf(progress * MINSIZE_STEP);
+                        if (!mFromApp) {
+                            mMinDetectSize.setText(value);
+                        }
+                    }
+                    mFromApp = false;
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
+        });
+
+        mMinDetectSize.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                mFromApp = true;
+                try {
+                    int progress = Integer.parseInt(s.toString());
+                    mSeekBar.setProgress(progress / MINSIZE_STEP);
+                } catch (Exception e) {
+                    // NOP
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
+
+
 
         // Find the widget id from the intent.
         Intent intent = getIntent();
@@ -127,9 +183,12 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
             return;
         }
 
+        int minSize = loadPrefInt(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_MIN_DETECT_SIZE);
+
         mEnableDebug.setChecked(loadPrefString(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_DEBUG));
         mEnableFaceDetect.setChecked(loadPrefString(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_FACE_DETECT));
-        mMinDetectSize.setText(Integer.toString(loadPrefInt(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_MIN_DETECT_SIZE)));
+        mMinDetectSize.setText(Integer.toString(minSize));
+        mSeekBar.setProgress(minSize / MINSIZE_STEP);
     }
 }
 
