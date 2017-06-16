@@ -399,18 +399,10 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         }
 
         if (!mIsOpenCvInitialized) {
-            // Enter relevant functionality for when the first widget is created
-            if (!OpenCVLoader.initDebug()) {
-                Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
-                mOpenCVLoaderCallback.initLatch();
-                OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, context.getApplicationContext(), mOpenCVLoaderCallback);
-                mOpenCVLoaderCallback.waitLatch();
-                mIsOpenCvInitialized = true;
-            } else {
-                Log.d(TAG, "OpenCV library found inside package. Using it!");
-                mOpenCVLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
-                mIsOpenCvInitialized = true;
-            }
+            mOpenCVLoaderCallback.initLatch();
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, context.getApplicationContext(), mOpenCVLoaderCallback);
+            mOpenCVLoaderCallback.waitLatch();
+            mIsOpenCvInitialized = true;
         }
     }
 
