@@ -22,6 +22,8 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.widget.RemoteViews;
 
+import com.deploygate.sdk.DeployGate;
+
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
@@ -279,8 +281,13 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                         bitmap = out.getBitmap();
                     }
                     adjustRect(rect, width, height, bitmap.getWidth(), bitmap.getHeight());
-                    Bitmap cropped = Bitmap.createBitmap(bitmap, rect.x, rect.y, rect.width, rect.height);
-                    return new BitmapWrapper(cropped, true);
+                    if (rect.x >= 0 && rect.y >= 0 && rect.width > 0 && rect.height > 0) {
+                        Bitmap cropped = Bitmap.createBitmap(bitmap, rect.x, rect.y, rect.width, rect.height);
+                        return new BitmapWrapper(cropped, true);
+                    } else {
+                        DeployGate.logWarn(String.format("getMediaImage(): w %d, h %d, bw %d, bh %d", width, height, bitmap.getWidth(), bitmap.getHeight()));
+                        return new BitmapWrapper(bitmap, false);
+                    }
                 } else {
                     float bitmapAspect = (float)bitmap.getHeight() / (float)bitmap.getWidth();
                     if (bitmapAspect > 0.5f && bitmap.getHeight() > height) {
