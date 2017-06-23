@@ -1,7 +1,10 @@
 package nirvash.animethumb;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.MediaStore;
@@ -12,6 +15,16 @@ public class MyService extends Service {
     public MyService() {
     }
 
+    private MyBroadcastReciever mReceiver = new MyBroadcastReciever();
+    class MyBroadcastReciever extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+             if (Intent.ACTION_CONFIGURATION_CHANGED.equals(intent.getAction())) {
+                 AnimeThumbAppWidget.broadcastUpdate(context);
+             }
+        }
+    }
+
     @Override
     public void onCreate() {
         if (mObserber == null) {
@@ -20,6 +33,9 @@ public class MyService extends Service {
             getContentResolver().registerContentObserver(MediaStore.Images.Media.INTERNAL_CONTENT_URI, true, mObserber);
         }
 
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_CONFIGURATION_CHANGED);
+        registerReceiver(mReceiver, filter);
     }
 
     @Override
@@ -29,6 +45,7 @@ public class MyService extends Service {
             getContentResolver().unregisterContentObserver(mObserber);
             mObserber = null;
         }
+        unregisterReceiver(mReceiver);
     }
 
     @Override

@@ -200,8 +200,6 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             broadcastUpdate(context); // ついでに更新もかける
         } else if (ACTION_UPDATE.equals(intent.getAction())) {
             broadcastUpdate(context);
-        } else if (Intent.ACTION_CONFIGURATION_CHANGED.equals(intent.getAction())) {
-            broadcastUpdate(context);
         }
     }
 
