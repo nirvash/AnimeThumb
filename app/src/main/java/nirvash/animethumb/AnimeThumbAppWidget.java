@@ -320,6 +320,9 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 rect.x -= diff / 2;
             }
             rect.width = w;
+            if (rect.x + rect.width > maxWidth) {
+                rect.width = maxWidth - rect.x;
+            }
         } else {
             int h = (int)(rect.width / widgetAspect);
             h = Math.min(maxHeight, h);
@@ -330,6 +333,9 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 rect.y -= diff / 2;
             }
             rect.height = h;
+            if (rect.y + rect.height > maxHeight) {
+                rect.height = maxHeight - rect.y;
+            }
         }
     }
 
