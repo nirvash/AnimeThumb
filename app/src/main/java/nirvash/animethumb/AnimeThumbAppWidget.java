@@ -9,11 +9,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -264,6 +267,9 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
+            bitmap = rotateByExifInfo(context, uri, bitmap);
+
             if (bitmap != null && enableFaceDetect(context, widgetId)) {
                 AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
                 Bundle options = appWidgetManager.getAppWidgetOptions(widgetId);
@@ -305,6 +311,70 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         }
         return null;
     }
+
+    private static Bitmap rotateByExifInfo(Context context, Uri uri, Bitmap bitmap) {
+        int orientation = getOrientation(context, uri);
+
+        Matrix mat = new Matrix();
+        boolean doRotate = false;
+        switch (orientation) {
+            case ExifInterface.ORIENTATION_ROTATE_90:
+                mat.postRotate(90);
+                doRotate = true;
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_180:
+                mat.postRotate(180);
+                doRotate = true;
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_270:
+                mat.postRotate(270);
+                doRotate = true;
+                break;
+            default:
+                break;
+        }
+
+        if (doRotate) {
+            Bitmap tmp = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), mat, true);
+            bitmap.recycle();
+            bitmap = tmp;
+        }
+
+        return bitmap;
+    }
+
+    private static int getOrientation(Context context, Uri uri) {
+        String[] selections = { MediaStore.Images.Media.DATA };
+        Cursor cursor = null;
+        String path = null;
+        try {
+            cursor = context.getContentResolver().query(uri, selections, null, null, null);
+            cursor.moveToFirst();
+            int columnIndex = cursor.getColumnIndex(selections[0]);
+            path = cursor.getString(columnIndex);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        int orientation = ExifInterface.ORIENTATION_NORMAL;
+        if (path == null) {
+            return orientation;
+        }
+
+        ExifInterface exifInterface = null;
+        try {
+            exifInterface = new ExifInterface(path);
+            orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return orientation;
+    }
+
 
     // ウィジェットのアスペクト比に合わせてクロップ領域を調整
     private static void adjustRect(Rect rect, int width, int height, int maxWidth, int maxHeight) {
