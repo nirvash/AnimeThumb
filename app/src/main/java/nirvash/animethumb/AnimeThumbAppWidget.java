@@ -199,7 +199,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             }
         }
 
-        Log.d(TAG, String.format("srcRect(%s) iw: %d, ih: %d, w:%d, h:%d", srcRect.toString(), imageWidth, imageHeight, width, height));
+        Log.d(TAG, String.format("cropImage: srcRect(%s) iw: %d, ih: %d, w:%d, h:%d", srcRect.toString(), imageWidth, imageHeight, width, height));
         Bitmap cropped = Bitmap.createBitmap(bitmap.getBitmap(), srcRect.x, srcRect.y, srcRect.width, srcRect.height);
         bitmap.recycle();
         Bitmap scaled = Bitmap.createScaledBitmap(cropped,  width, height, true);
@@ -209,8 +209,8 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        super.onReceive(context, intent);
         Log.d(TAG, "onReceive:" + intent.getAction());
+        super.onReceive(context, intent);
 
         if (ACTION_WIDGET_UPDATE.equals(intent.getAction())) {
             Uri uri = getMediaImageUri(context);
@@ -292,8 +292,9 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 int width = getWidth(context, options);
                 int height = getHeight(context, options);
                 float aspect = (float)height / (float)width;
-                FaceCrop crop = null;
+                Log.d(TAG, String.format("getMediaImage: enableFaceDetect: w %d, h %d", width, height));
 
+                FaceCrop crop = null;
                 if (mFaceCropCacheUri != null && mFaceCropCacheUri.equals(uri)) {
                     crop = mFaceCropCache;
                 } else {
@@ -301,6 +302,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 }
                 Rect rect = crop.getFaceRect(bitmap);
                 if (crop.isSuccess()) {
+                    Log.d(TAG, "getMediaImage: crop.isSuccess(): rect:" + rect.toString());
                     mFaceCropCache = crop;
                     mFaceCropCacheUri = uri;
                     if (enableDebug(context,widgetId)) {
@@ -316,6 +318,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                         return new BitmapWrapper(bitmap, false);
                     }
                 } else {
+                    Log.d(TAG, "getMediaImage: crop failed");
                     float bitmapAspect = (float)bitmap.getHeight() / (float)bitmap.getWidth();
                     if (bitmapAspect > 0.5f && bitmap.getHeight() > height) {
                         float rate = bitmapAspect > 1.5f ? 0.4f : 0.6f;
@@ -520,6 +523,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
     @Override
     public void onAppWidgetOptionsChanged (Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
+        Log.d(TAG, "onAppWidgetOptionsChanged");
         mFaceCropCacheUri = null;
         mFaceCropCache = null;
         if(!checkOpenCV(context)) {

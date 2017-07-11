@@ -211,23 +211,16 @@ public class FaceCrop {
 
     public Rect getFaceRect(Bitmap bitmap) {
         if (bitmap == null || bitmap.getWidth() * bitmap.getHeight() == 0) {
-            return mRect;
+            return mRect.clone();
         }
 
         if (!mIsFirst) {
-/*
-            if (mColor == Color.MAGENTA || mColor == Color.GREEN) {
-                mColor = Color.GREEN;
-            } else {
-                mColor = Color.CYAN;
-            }
-*/
-            return mRect;
+            return mRect.clone();
         }
 
         if (sFaceDetectorAnimeFace == null) {
             DeployGate.logWarn("getFaceRect: sFaceDetectorAnimeFace is null");
-            return mRect;
+            return mRect.clone();
         }
 
         mIsFirst = false;
@@ -347,7 +340,7 @@ public class FaceCrop {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return mRect;
+        return mRect.clone();
     }
 
     private Point rotatePoint(Point point, Point center, double angle) {

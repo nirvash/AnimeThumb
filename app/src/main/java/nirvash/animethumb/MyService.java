@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.MediaStore;
+import android.util.Log;
 
 public class MyService extends Service {
     private MediaStoreObserver mObserber = null;
@@ -17,9 +18,12 @@ public class MyService extends Service {
 
     private MyBroadcastReciever mReceiver = new MyBroadcastReciever();
     class MyBroadcastReciever extends BroadcastReceiver {
+        private final String TAG = MyBroadcastReciever.class.getSimpleName();
+
         @Override
         public void onReceive(Context context, Intent intent) {
              if (Intent.ACTION_CONFIGURATION_CHANGED.equals(intent.getAction())) {
+                 Log.d(TAG, "onReceive: " + intent.getAction());
                  AnimeThumbAppWidget.broadcastUpdate(context);
              }
         }
