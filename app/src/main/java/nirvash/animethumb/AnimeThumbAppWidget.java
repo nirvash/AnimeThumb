@@ -46,10 +46,17 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     public static final String ACTION_WIDGET_UPDATE = "nirvash.animethumb.ACTION_WIDGET_UPDATE";
     public static final String ACTION_UPDATE = "nirvash.animethumb.ACTION_UPDATE";
 
-    private boolean mIsOpenCvInitialized = false;
+    private static boolean mIsOpenCvInitialized = false;
+    static private FaceCrop mFaceCropCache = null;
+    static private Uri mFaceCropCacheUri = null;
 
     private class MyLoaderCallback extends BaseLoaderCallback {
         private CountDownLatch mLatch = null;
+        private long mStartTime = 0;
+
+        public void setStartTime() {
+            mStartTime = System.currentTimeMillis();
+        }
 
         public void initLatch() {
             if (mLatch != null) {
@@ -58,15 +65,19 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             mLatch = new CountDownLatch(1);
         }
 
-        public void waitLatch() {
+        public boolean waitLatch() {
+            boolean result = false;
             if (mLatch != null) {
                 try {
-                    mLatch.await(1000, TimeUnit.MILLISECONDS);
+                    result = mLatch.await(1000 * 20, TimeUnit.MILLISECONDS);
                 } catch (InterruptedException e) {
+//                    DeployGate.logWarn("opencv init : timeout:" + e.getMessage());
+                    Log.w(TAG, "opencv init : timeout:" + e.getMessage());
                     e.printStackTrace();
                 }
                 mLatch = null;
             }
+            return result;
         }
 
         public MyLoaderCallback(Context context) {
@@ -77,10 +88,15 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             super.onManagerConnected(status);
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS:
+                    Log.d(TAG, "initAsync: pre " + Long.toString(System.currentTimeMillis() - mStartTime));
                     FaceCrop.initFaceDetector(mAppContext);
                     if (mLatch != null) {
                         mLatch.countDown();
                     }
+                    Log.d(TAG, "initAsync: after " + Long.toString(System.currentTimeMillis() - mStartTime));
+                    // Context のライフサイクル上でコールバックが返ってくるので呼び出しスレッドを止めて待っても意味がない
+                    mIsOpenCvInitialized = true;
+                    AnimeThumbAppWidget.broadcastUpdate(mAppContext);
                     break;
                 default:
                     super.onManagerConnected(status);
@@ -194,7 +210,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
-        Log.d(TAG, "onReceive");
+        Log.d(TAG, "onReceive:" + intent.getAction());
 
         if (ACTION_WIDGET_UPDATE.equals(intent.getAction())) {
             Uri uri = getMediaImageUri(context);
@@ -276,10 +292,17 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 int width = getWidth(context, options);
                 int height = getHeight(context, options);
                 float aspect = (float)height / (float)width;
+                FaceCrop crop = null;
 
-                FaceCrop crop = new FaceCrop(height, 300, 300, enableDebug(context, widgetId), getMinDetectSize(context, widgetId));
+                if (mFaceCropCacheUri != null && mFaceCropCacheUri.equals(uri)) {
+                    crop = mFaceCropCache;
+                } else {
+                    crop = new FaceCrop(height, 300, 300, enableDebug(context, widgetId), getMinDetectSize(context, widgetId));
+                }
                 Rect rect = crop.getFaceRect(bitmap);
                 if (crop.isSuccess()) {
+                    mFaceCropCache = crop;
+                    mFaceCropCacheUri = uri;
                     if (enableDebug(context,widgetId)) {
                         BitmapWrapper out = crop.drawRegion(new BitmapWrapper(bitmap, false));
                         bitmap = out.getBitmap();
@@ -449,7 +472,11 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-        checkOpenCV(context);
+        Log.d(TAG, "onUpdate:");
+        if (!checkOpenCV(context)) {
+            Log.d(TAG, "onUpdate: opencv is not initaialized");
+            return;
+        }
 
         Intent serviceIntent = new Intent(context, MyService.class);
         context.startService(serviceIntent);
@@ -474,17 +501,15 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         checkOpenCV(context);
     }
 
-    private void checkOpenCV(Context context) {
-        if (mOpenCVLoaderCallback == null) {
-            mOpenCVLoaderCallback = new MyLoaderCallback(context.getApplicationContext());
-        }
-
+    private boolean checkOpenCV(Context context) {
         if (!mIsOpenCvInitialized) {
-            mOpenCVLoaderCallback.initLatch();
+            if (mOpenCVLoaderCallback == null) {
+                mOpenCVLoaderCallback = new MyLoaderCallback(context.getApplicationContext());
+            }
+            mOpenCVLoaderCallback.setStartTime();
             OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, context.getApplicationContext(), mOpenCVLoaderCallback);
-            mOpenCVLoaderCallback.waitLatch();
-            mIsOpenCvInitialized = true;
         }
+        return mIsOpenCvInitialized;
     }
 
     @Override
@@ -495,8 +520,11 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
     @Override
     public void onAppWidgetOptionsChanged (Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
-        // This is how you get your changes.
-        checkOpenCV(context);
+        mFaceCropCacheUri = null;
+        mFaceCropCache = null;
+        if(!checkOpenCV(context)) {
+            return;
+        }
 
         updateAppWidget(context, appWidgetManager, appWidgetId);
     }

@@ -73,9 +73,11 @@ public class FaceCrop {
         if (sFaceDetectorFace == null) {
             sFaceDetectorFace = setupFaceDetector(context, "lbpcascade_frontalface_improved.xml", R.raw.lbpcascade_frontalface_improved);
         }
+/*
         if (sFaceDetector_Cat == null) {
             sFaceDetector_Cat = setupFaceDetector(context, "lbpcascade_cat.xml", R.raw.lbpcascade_cat);
         }
+*/
     }
 
     private static File setupCascadeFile(Context context, String fileName, int xml) {
@@ -224,6 +226,7 @@ public class FaceCrop {
         }
 
         if (sFaceDetectorAnimeFace == null) {
+            DeployGate.logWarn("getFaceRect: sFaceDetectorAnimeFace is null");
             return mRect;
         }
 
@@ -236,7 +239,7 @@ public class FaceCrop {
                 new DetectorConf(sFaceDetectorAnimeProfileFace, 0, 1.1f, 2,  minSize,Color.BLACK, false, "AP"),
                 new DetectorConf(sFaceDetectorAnimeProfileFace, 0, 1.1f, 2,  minSize,Color.BLACK, true, "APF"),
                 new DetectorConf(sFaceDetectorFace,   0, 1.09f, 3, minSize,Color.BLUE, false, "F"),
-                new DetectorConf(sFaceDetector_Cat,   0, 1.09f, 3, minSize, Color.BLUE, false, "C")
+//                new DetectorConf(sFaceDetector_Cat,   0, 1.09f, 3, minSize, Color.BLUE, false, "C")
         };
 
         try {
@@ -261,6 +264,7 @@ public class FaceCrop {
                 }
             }
         } catch (Exception e) {
+            DeployGate.logWarn("getFaceRect: exception: " + e.getMessage());
             e.printStackTrace();
         }
 
