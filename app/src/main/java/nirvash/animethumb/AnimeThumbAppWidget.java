@@ -49,67 +49,6 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     private static boolean mIsOpenCvInitialized = false;
     static private FaceCrop mFaceCropCache = null;
     static private Uri mFaceCropCacheUri = null;
-
-    private class MyLoaderCallback extends BaseLoaderCallback {
-        private CountDownLatch mLatch = null;
-        private long mStartTime = 0;
-
-        public void setStartTime() {
-            mStartTime = System.currentTimeMillis();
-        }
-
-        public void initLatch() {
-            if (mLatch != null) {
-                mLatch.countDown();
-            }
-            mLatch = new CountDownLatch(1);
-        }
-
-        public boolean waitLatch() {
-            boolean result = false;
-            if (mLatch != null) {
-                try {
-                    result = mLatch.await(1000 * 20, TimeUnit.MILLISECONDS);
-                } catch (InterruptedException e) {
-//                    DeployGate.logWarn("opencv init : timeout:" + e.getMessage());
-                    Log.w(TAG, "opencv init : timeout:" + e.getMessage());
-                    e.printStackTrace();
-                }
-                mLatch = null;
-            }
-            return result;
-        }
-
-        public MyLoaderCallback(Context context) {
-            super(context);
-        }
-        @Override
-        public void onManagerConnected(int status) {
-            super.onManagerConnected(status);
-            switch (status) {
-                case LoaderCallbackInterface.SUCCESS:
-                    Log.d(TAG, "initAsync: pre " + Long.toString(System.currentTimeMillis() - mStartTime));
-                    FaceCrop.initFaceDetector(mAppContext);
-                    if (mLatch != null) {
-                        mLatch.countDown();
-                    }
-                    Log.d(TAG, "initAsync: after " + Long.toString(System.currentTimeMillis() - mStartTime));
-                    // Context のライフサイクル上でコールバックが返ってくるので呼び出しスレッドを止めて待っても意味がない
-                    mIsOpenCvInitialized = true;
-                    AnimeThumbAppWidget.broadcastUpdate(mAppContext);
-                    break;
-                default:
-                    super.onManagerConnected(status);
-                    if (mLatch != null) {
-                        mLatch.countDown();
-                    }
-                    break;
-            }
-        }
-    }
-
-    private MyLoaderCallback mOpenCVLoaderCallback = null;
-
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
                                 int appWidgetId) {
         // Construct the RemoteViews object
@@ -473,7 +412,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         Log.d(TAG, "onUpdate:");
-        if (!checkOpenCV(context)) {
+        if (!OpenCVWrapper.initialize(context)) {
             Log.d(TAG, "onUpdate: opencv is not initaialized");
             return;
         }
@@ -498,19 +437,10 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
     @Override
     public void onEnabled(Context context) {
-        checkOpenCV(context);
+        OpenCVWrapper.initialize(context);
     }
 
-    private boolean checkOpenCV(Context context) {
-        if (!mIsOpenCvInitialized) {
-            if (mOpenCVLoaderCallback == null) {
-                mOpenCVLoaderCallback = new MyLoaderCallback(context.getApplicationContext());
-            }
-            mOpenCVLoaderCallback.setStartTime();
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, context.getApplicationContext(), mOpenCVLoaderCallback);
-        }
-        return mIsOpenCvInitialized;
-    }
+
 
     @Override
     public void onDisabled(Context context) {
@@ -522,7 +452,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     public void onAppWidgetOptionsChanged (Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
         mFaceCropCacheUri = null;
         mFaceCropCache = null;
-        if(!checkOpenCV(context)) {
+        if (!OpenCVWrapper.initialize(context)) {
             return;
         }
 
