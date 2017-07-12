@@ -208,26 +208,23 @@ public class FaceCrop {
         public String tag;
     }
 
+    private Rect getRect() {
+        return mRect == null ? null : mRect.clone();
+    }
+
 
     public Rect getFaceRect(Bitmap bitmap) {
         if (bitmap == null || bitmap.getWidth() * bitmap.getHeight() == 0) {
-            return mRect;
+            return getRect();
         }
 
         if (!mIsFirst) {
-/*
-            if (mColor == Color.MAGENTA || mColor == Color.GREEN) {
-                mColor = Color.GREEN;
-            } else {
-                mColor = Color.CYAN;
-            }
-*/
-            return mRect;
+            return getRect();
         }
 
         if (sFaceDetectorAnimeFace == null) {
             DeployGate.logWarn("getFaceRect: sFaceDetectorAnimeFace is null");
-            return mRect;
+            return getRect();
         }
 
         mIsFirst = false;
@@ -347,7 +344,7 @@ public class FaceCrop {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return mRect;
+        return getRect();
     }
 
     private Point rotatePoint(Point point, Point center, double angle) {
@@ -397,7 +394,7 @@ public class FaceCrop {
         mRects.add(r);
         mIsSuccess = true;
         mColor = Color.BLUE;
-        return mRect;
+        return getRect();
     }
 
     // 領域分割

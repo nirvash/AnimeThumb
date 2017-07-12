@@ -8,8 +8,10 @@ import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.MediaStore;
+import android.util.Log;
 
 public class MyService extends Service {
+    private final String TAG = MyService.class.getSimpleName();
     private MediaStoreObserver mObserber = null;
 
     public MyService() {
@@ -17,9 +19,12 @@ public class MyService extends Service {
 
     private MyBroadcastReciever mReceiver = new MyBroadcastReciever();
     class MyBroadcastReciever extends BroadcastReceiver {
+        private String TAG = MyBroadcastReciever.class.getSimpleName();
+
         @Override
         public void onReceive(Context context, Intent intent) {
              if (Intent.ACTION_CONFIGURATION_CHANGED.equals(intent.getAction())) {
+                 Log.d(TAG, "onReceive: " + intent.getAction());
                  AnimeThumbAppWidget.broadcastUpdate(context);
              }
         }
@@ -27,6 +32,7 @@ public class MyService extends Service {
 
     @Override
     public void onCreate() {
+        Log.d(TAG, "onCreate");
         if (mObserber == null) {
             mObserber = new MediaStoreObserver(new Handler(), this);
             getContentResolver().registerContentObserver(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, mObserber);
@@ -40,6 +46,7 @@ public class MyService extends Service {
 
     @Override
     public void onDestroy() {
+        Log.d(TAG, "onDestroy");
         // Enter relevant functionality for when the last widget is disabled
         if (mObserber != null) {
             getContentResolver().unregisterContentObserver(mObserber);
