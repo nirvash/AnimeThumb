@@ -11,7 +11,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class OpenCVWrapper {
-    private static MyLoaderCallback mOpenCVLoaderCallback = null;
+    private static final MyLoaderCallback mOpenCVLoaderCallback = null;
     private static class MyLoaderCallback extends BaseLoaderCallback {
         private final String TAG = MyLoaderCallback.class.getSimpleName();
         private CountDownLatch mLatch = null;
@@ -49,24 +49,21 @@ public class OpenCVWrapper {
         @Override
         public void onManagerConnected(int status) {
             super.onManagerConnected(status);
-            switch (status) {
-                case LoaderCallbackInterface.SUCCESS:
-                    Log.d(TAG, "initAsync: pre " + Long.toString(System.currentTimeMillis() - mStartTime));
-                    FaceCrop.initFaceDetector(mAppContext);
-                    if (mLatch != null) {
-                        mLatch.countDown();
-                    }
-                    Log.d(TAG, "initAsync: after " + Long.toString(System.currentTimeMillis() - mStartTime));
-                    // Context のライフサイクル上でコールバックが返ってくるので呼び出しスレッドを止めて待っても意味がない
-                    mInitialized = true;
-                    AnimeThumbAppWidget.broadcastUpdate(mAppContext);
-                    break;
-                default:
-                    super.onManagerConnected(status);
-                    if (mLatch != null) {
-                        mLatch.countDown();
-                    }
-                    break;
+            if (status == LoaderCallbackInterface.SUCCESS) {
+                Log.d(TAG, "initAsync: pre " + (System.currentTimeMillis() - mStartTime));
+                FaceCrop.initFaceDetector(mAppContext);
+                if (mLatch != null) {
+                    mLatch.countDown();
+                }
+                Log.d(TAG, "initAsync: after " + (System.currentTimeMillis() - mStartTime));
+                // Context のライフサイクル上でコールバックが返ってくるので呼び出しスレッドを止めて待っても意味がない
+                mInitialized = true;
+                AnimeThumbAppWidget.broadcastUpdate(mAppContext);
+            } else {
+                super.onManagerConnected(status);
+                if (mLatch != null) {
+                    mLatch.countDown();
+                }
             }
         }
     }
@@ -78,13 +75,17 @@ public class OpenCVWrapper {
         if (mInitialized) {
             return true;
         }
-
+ /*
         if (mOpenCVLoaderCallback == null) {
             mOpenCVLoaderCallback = new MyLoaderCallback(context.getApplicationContext());
         }
         mOpenCVLoaderCallback.setStartTime();
         // インストールされていない場合、下記 init で false になるので必要なら対処
-        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, context.getApplicationContext(), mOpenCVLoaderCallback);
+        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_4_0, context.getApplicationContext(), mOpenCVLoaderCallback);
         return false; // ロード完了したら UPDATE を呼ぶ
+ */
+        FaceCrop.initFaceDetector(context.getApplicationContext());
+        mInitialized = true;
+        return true;
     }
 }

@@ -1,5 +1,6 @@
 package nirvash.animethumb;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.appwidget.AppWidgetManager;
 import android.content.Context;
@@ -14,6 +15,8 @@ import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
+
+import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import org.w3c.dom.Text;
 
@@ -31,8 +34,8 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
 
     int mAppWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
 
-    Switch mEnableDebug;
-    Switch mEnableFaceDetect;
+    SwitchMaterial mEnableDebug;
+    SwitchMaterial mEnableFaceDetect;
     EditText mMinDetectSize;
     SeekBar mSeekBar;
     boolean mFromApp = false;
@@ -85,14 +88,12 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
     // If there is no preference saved, get the default from a resource
     static boolean loadPrefString(Context context, int appWidgetId, String key) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, 0);
-        boolean value = prefs.getBoolean(PREF_PREFIX_KEY + appWidgetId + key, true);
-        return value;
+        return prefs.getBoolean(PREF_PREFIX_KEY + appWidgetId + key, true);
     }
 
     static int loadPrefInt(Context context, int appWidgetId, String key) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, 0);
-        int value = prefs.getInt(PREF_PREFIX_KEY + appWidgetId + key, 100);
-        return value;
+        return prefs.getInt(PREF_PREFIX_KEY + appWidgetId + key, 100);
     }
 
 
@@ -104,6 +105,7 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
         prefs.apply();
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
@@ -115,10 +117,10 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
         setResult(RESULT_CANCELED);
 
         setContentView(R.layout.anime_thumb_app_widget_configure);
-        mEnableDebug = (Switch) findViewById(R.id.switchEnableDebug);
-        mEnableFaceDetect = (Switch) findViewById(R.id.switchEnableFaceDetect);
-        mMinDetectSize = (EditText) findViewById(R.id.editTextSize);
-        mSeekBar = (SeekBar) findViewById(R.id.seekBar);
+        mEnableDebug = findViewById(R.id.switchEnableDebug);
+        mEnableFaceDetect = findViewById(R.id.switchEnableFaceDetect);
+        mMinDetectSize = findViewById(R.id.editTextSize);
+        mSeekBar = findViewById(R.id.seekBar);
         mSeekBar.setMax(MINSIZE_MAX / MINSIZE_STEP);
         findViewById(R.id.add_button).setOnClickListener(mOnClickListener);
 

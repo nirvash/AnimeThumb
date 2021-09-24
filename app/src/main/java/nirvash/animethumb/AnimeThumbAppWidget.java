@@ -1,5 +1,6 @@
 package nirvash.animethumb;
 
+import android.annotation.SuppressLint;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
@@ -9,32 +10,30 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.ImageDecoder;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
-import android.media.ExifInterface;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.widget.RemoteViews;
 
+import androidx.annotation.NonNull;
+import androidx.exifinterface.media.ExifInterface;
+
 import com.deploygate.sdk.DeployGate;
 
-import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.LoaderCallbackInterface;
-import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Rect;
 
 import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.io.InputStream;
 
 /**
  * Implementation of App Widget functionality.
@@ -73,19 +72,17 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         Intent intent = new Intent(context, AnimeThumbAppWidget.class);
         intent.setAction(ACTION_WIDGET_UPDATE);
         intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(context, appWidgetId, intent, 0);
+        @SuppressLint("UnspecifiedImmutableFlag") PendingIntent pendingIntent = PendingIntent.getBroadcast(context, appWidgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         views.setOnClickPendingIntent(R.id.imageView, pendingIntent);
 
         Intent configIntent = new Intent(context, AnimeThumbAppWidgetConfigureActivity.class);
         configIntent.setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE);
         configIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
-        PendingIntent configPendingIntent = PendingIntent.getActivity(context, appWidgetId, configIntent, 0);
+        @SuppressLint("UnspecifiedImmutableFlag") PendingIntent configPendingIntent = PendingIntent.getActivity(context, appWidgetId, configIntent, PendingIntent.FLAG_UPDATE_CURRENT);
         views.setOnClickPendingIntent(R.id.setting, configPendingIntent);
 
         // Instruct the widget manager to update the widget
         appWidgetManager.updateAppWidget(appWidgetId, views);
-
-
     }
 
     private static BitmapWrapper clipCorner(BitmapWrapper bitmap) {
@@ -99,7 +96,8 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         RectF rect = new RectF(0, 0, bitmap.getWidth(), bitmap.getHeight());
         c.drawRoundRect(rect, 30, 30, paint);
         paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
-        c.drawBitmap(bitmap.getBitmap(), 0, 0, paint);
+        Bitmap targetBitmap = bitmap.getBitmap().copy(Bitmap.Config.ARGB_8888, false);
+        c.drawBitmap(targetBitmap, 0, 0, paint);
         bitmap.recycle();
         return new BitmapWrapper(dst, true);
     }
@@ -154,9 +152,12 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         if (ACTION_WIDGET_UPDATE.equals(intent.getAction())) {
             Uri uri = getMediaImageUri(context);
             Intent launchIntent = new Intent(Intent.ACTION_VIEW, uri);
+            launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(launchIntent);
             broadcastUpdate(context); // ついでに更新もかける
         } else if (ACTION_UPDATE.equals(intent.getAction())) {
+            broadcastUpdate(context);
+        } else if (Intent.ACTION_SCREEN_ON.equals(intent.getAction())) {
             broadcastUpdate(context);
         }
     }
@@ -191,8 +192,8 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             String order =  MediaStore.Images.Media.DATE_MODIFIED + " DESC";
             cursor = context.getContentResolver().query(uri, null, null, null, order);
             if (cursor.moveToNext()) {
-                Long id = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media._ID));
-                Long date = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media.DATE_MODIFIED));
+                @SuppressLint("Range") long id = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media._ID));
+                @SuppressLint("Range") Long date = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media.DATE_MODIFIED));
                 Uri mediaUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
                 return new MediaInfo(mediaUri, date);
             }
@@ -214,11 +215,23 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     }
 
 
+    @SuppressLint("DefaultLocale")
     private static BitmapWrapper getMediaImage(Uri uri, Context context, int widgetId) {
         if (uri != null) {
             Bitmap bitmap = null;
             try {
-                bitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(), uri);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ImageDecoder.Source source = ImageDecoder.createSource(context.getContentResolver(), uri);
+                    ImageDecoder.OnHeaderDecodedListener listener = new ImageDecoder.OnHeaderDecodedListener() {
+                        @Override
+                        public void onHeaderDecoded(@NonNull ImageDecoder imageDecoder, @NonNull ImageDecoder.ImageInfo imageInfo, @NonNull ImageDecoder.Source source) {
+                            imageDecoder.setMutableRequired(true);
+                        }
+                    };
+                    bitmap = ImageDecoder.decodeBitmap(source, listener);
+                } else {
+                    bitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(), uri);
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -233,7 +246,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 float aspect = (float)height / (float)width;
                 Log.d(TAG, String.format("getMediaImage: enableFaceDetect: w %d, h %d", width, height));
 
-                FaceCrop crop = null;
+                FaceCrop crop;
                 if (mFaceCropCacheUri != null && mFaceCropCacheUri.equals(uri)) {
                     crop = mFaceCropCache;
                 } else {
@@ -310,29 +323,21 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
     private static int getOrientation(Context context, Uri uri) {
         String[] selections = { MediaStore.Images.Media.DATA };
-        Cursor cursor = null;
-        String path = null;
+        InputStream input = null;
         try {
-            cursor = context.getContentResolver().query(uri, selections, null, null, null);
-            cursor.moveToFirst();
-            int columnIndex = cursor.getColumnIndex(selections[0]);
-            path = cursor.getString(columnIndex);
+            input = context.getContentResolver().openInputStream(uri);
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
         }
 
         int orientation = ExifInterface.ORIENTATION_NORMAL;
-        if (path == null) {
+        if (input == null) {
             return orientation;
         }
 
-        ExifInterface exifInterface = null;
+        ExifInterface exifInterface;
         try {
-            exifInterface = new ExifInterface(path);
+            exifInterface = new ExifInterface(input);
             orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
         } catch (Exception e) {
             e.printStackTrace();
@@ -420,9 +425,6 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             return;
         }
 
-        Intent serviceIntent = new Intent(context, MyService.class);
-        context.startService(serviceIntent);
-
         // There may be multiple widgets active, so update all of them
         for (int appWidgetId : appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId);
@@ -441,14 +443,6 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     @Override
     public void onEnabled(Context context) {
         OpenCVWrapper.initialize(context);
-    }
-
-
-
-    @Override
-    public void onDisabled(Context context) {
-        Intent serviceIntent = new Intent(context, MyService.class);
-        context.stopService(serviceIntent);
     }
 
     @Override

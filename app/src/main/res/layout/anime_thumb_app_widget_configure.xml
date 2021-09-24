@@ -20,13 +20,14 @@
         android:layout_marginStart="16dp"
         android:orientation="vertical">
 
-        <Switch
+        <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switchEnableDebug"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:minHeight="48dp"
             android:text="@string/config_enable_debug" />
 
-        <Switch
+        <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switchEnableFaceDetect"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -68,7 +69,9 @@
                     android:gravity="end"
                     android:inputType="number"
                     android:selectAllOnFocus="true"
-                    android:textSize="16sp" />
+                    android:textSize="16sp"
+                    android:autofillHints=""
+                    tools:targetApi="o"/>
 
             </LinearLayout>
 

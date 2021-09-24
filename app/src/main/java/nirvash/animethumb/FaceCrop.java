@@ -1,5 +1,6 @@
 package nirvash.animethumb;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -41,8 +42,8 @@ public class FaceCrop {
     private int mMaxHeight;
     private float mWidth;
     private float mHeight;
-    private boolean mEnableDebug = false;
-    private int mMinDetectSize = 100;
+    private boolean mEnableDebug;
+    private int mMinDetectSize;
 
     private Rect mRect;
     private List<Rect> mRects = new ArrayList<>();
@@ -82,7 +83,7 @@ public class FaceCrop {
 
     private static File setupCascadeFile(Context context, String fileName, int xml) {
         File cascadeDir = context.getFilesDir();
-        File cascadeFile = null;
+        File cascadeFile;
         InputStream is = null;
         FileOutputStream os = null;
         try {
@@ -91,12 +92,13 @@ public class FaceCrop {
                 is = context.getResources().openRawResource(xml);
                 os = new FileOutputStream(cascadeFile);
                 byte[] buffer = new byte[4096];
-                int readLen = 0;
+                int readLen;
                 while ((readLen = is.read(buffer)) != -1) {
                     os.write(buffer, 0, readLen);
                 }
             }
         } catch (IOException e) {
+            DeployGate.logError("setupCascadeFile: " + fileName + " : " + e.toString());
             return null;
         } finally {
             if (is != null) {
@@ -120,12 +122,14 @@ public class FaceCrop {
     private static CascadeClassifier setupFaceDetector(Context context, String fileName, int xml) {
         File cascadeFile = setupCascadeFile(context, fileName, xml);
         if (cascadeFile == null) {
+            DeployGate.logError("setupFaceDetector: cascadeFile is null : " + fileName);
             return null;
         }
 
         CascadeClassifier detector = new CascadeClassifier(cascadeFile.getAbsolutePath());
         detector.load(cascadeFile.getAbsolutePath());
         if (detector.empty()) {
+            DeployGate.logError("setupFaceDetector: detector is empty : " + fileName);
             return null;
         }
         return detector;
@@ -268,6 +272,7 @@ public class FaceCrop {
         return null;
     }
 
+    @SuppressLint("DefaultLocale")
     public Rect getFaceRectImpl(Mat imageMat, DetectorConf conf, double scale) {
         if (conf.detector == null) {
             return null;
@@ -305,12 +310,12 @@ public class FaceCrop {
                     }
                     if (conf.angle != 0) {
                         Point inPoint = r.tl();
-                        inPoint.x += r.width / 2;
-                        inPoint.y += r.height / 2;
+                        inPoint.x += r.width / 2.0f;
+                        inPoint.y += r.height / 2.0f;
                         Log.d(TAG, String.format("face area org: (%d, %d, %d, %d) : angle %s", r.x, r.y, r.width, r.height, conf.angle));
                         Point outPoint = rotatePoint(inPoint, new Point(mWidth/2, mHeight/2), conf.angle);
-                        outPoint.x -= r.width / 2;
-                        outPoint.y -= r.height / 2;
+                        outPoint.x -= r.width / 2.0f;
+                        outPoint.y -= r.height / 2.0f;
                         r.x = (int) outPoint.x;
                         r.y = (int) outPoint.y;
                     }
@@ -529,7 +534,7 @@ public class FaceCrop {
         Imgproc.dilate(bw, bw, kernel,  new Point(-1, -1), 3); // CV_32FC1 -> CV_32FC1
         bw.convertTo(bw, CvType.CV_8U); // CV_32FC1 -> CV_8UC1
 
-        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+        List<MatOfPoint> contours = new ArrayList<>();
         Mat hierarchy = Mat.zeros(new Size(5,5), CvType.CV_8UC1);
         Imgproc.findContours(bw, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_TC89_L1);
 
@@ -571,11 +576,11 @@ public class FaceCrop {
 
             Rect r = new Rect(mRect.x, mRect.y, mRect.width, mRect.height);
             if (bitmapAspect > aspect) {
-                r = addVPadding(r, bitmap.getBitmap(), (int) (w * aspect));
+                addVPadding(r, bitmap.getBitmap(), (int) (w * aspect));
                 Bitmap resized = Bitmap.createBitmap(bitmap.getBitmap(), 0, r.y, (int) w, r.height);
                 return new BitmapWrapper(resized, true);
             } else {
-                r = addHPadding(r, bitmap.getBitmap(), (int) (h / aspect));
+                addHPadding(r, bitmap.getBitmap(), (int) (h / aspect));
                 Bitmap resized = Bitmap.createBitmap(bitmap.getBitmap(), r.x, 0, r.width, (int) h);
                 return new BitmapWrapper(resized, true);
             }

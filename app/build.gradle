@@ -2,12 +2,11 @@ apply plugin: 'com.android.application'
 apply plugin: 'deploygate'
 
 android {
-    compileSdkVersion 25
-    buildToolsVersion "25.0.2"
+    compileSdkVersion 31
     defaultConfig {
         applicationId "nirvash.animethumb"
-        minSdkVersion 19
-        targetSdkVersion 25
+        minSdkVersion 21
+        targetSdkVersion 31
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -21,13 +20,15 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
+    implementation 'com.google.android.play:core:1.10.2'
+
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation project(path: ':opencv')
+    androidTestImplementation('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    compile 'com.android.support:appcompat-v7:25.3.1'
-    compile project(':openCVLibrary320')
-    testCompile 'junit:junit:4.12'
-    compile 'com.deploygate:sdk:3.1.1'
-
+    testImplementation 'junit:junit:4.13.2'
+    implementation 'com.deploygate:sdk:4.1.0'
+    implementation "com.google.android.material:material:1.5.0-alpha03"
+    implementation "androidx.exifinterface:exifinterface:1.3.3"
 }
