@@ -405,11 +405,11 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     }
 
     private static boolean enableFaceDetect(Context context, int widgetId) {
-        return AnimeThumbAppWidgetConfigureActivity.loadPrefString(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_FACE_DETECT);
+        return AnimeThumbAppWidgetConfigureActivity.loadPrefBoolean(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_FACE_DETECT, true);
     }
 
     private static boolean enableDebug(Context context, int widgetId) {
-        return AnimeThumbAppWidgetConfigureActivity.loadPrefString(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_DEBUG);
+        return AnimeThumbAppWidgetConfigureActivity.loadPrefBoolean(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_ENABLE_DEBUG, false);
     }
 
     private static int getMinDetectSize(Context context, int widgetId) {

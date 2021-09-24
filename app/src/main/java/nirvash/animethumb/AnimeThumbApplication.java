@@ -11,6 +11,7 @@ import android.provider.MediaStore;
 import androidx.annotation.NonNull;
 
 import com.deploygate.sdk.DeployGate;
+import com.google.android.gms.ads.MobileAds;
 
 
 public class AnimeThumbApplication extends Application {

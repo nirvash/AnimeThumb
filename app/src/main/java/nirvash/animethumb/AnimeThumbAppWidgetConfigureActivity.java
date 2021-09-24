@@ -10,15 +10,18 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.SeekBar;
-import android.widget.Switch;
-import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+
+import com.deploygate.sdk.DeployGate;
+import com.google.android.gms.ads.AdListener;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.MobileAds;
 import com.google.android.material.switchmaterial.SwitchMaterial;
-
-import org.w3c.dom.Text;
 
 /**
  * The configuration screen for the {@link AnimeThumbAppWidget AnimeThumbAppWidget} AppWidget.
@@ -86,9 +89,9 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
 
     // Read the prefix from the SharedPreferences object for this widget.
     // If there is no preference saved, get the default from a resource
-    static boolean loadPrefString(Context context, int appWidgetId, String key) {
+    static boolean loadPrefBoolean(Context context, int appWidgetId, String key, boolean defaultValue) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, 0);
-        return prefs.getBoolean(PREF_PREFIX_KEY + appWidgetId + key, true);
+        return prefs.getBoolean(PREF_PREFIX_KEY + appWidgetId + key, defaultValue);
     }
 
     static int loadPrefInt(Context context, int appWidgetId, String key) {
@@ -187,10 +190,28 @@ public class AnimeThumbAppWidgetConfigureActivity extends Activity {
 
         int minSize = loadPrefInt(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_MIN_DETECT_SIZE);
 
-        mEnableDebug.setChecked(loadPrefString(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_DEBUG));
-        mEnableFaceDetect.setChecked(loadPrefString(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_FACE_DETECT));
+        mEnableDebug.setChecked(loadPrefBoolean(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_DEBUG, false));
+        mEnableFaceDetect.setChecked(loadPrefBoolean(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_FACE_DETECT, true));
         mMinDetectSize.setText(Integer.toString(minSize));
         mSeekBar.setProgress(minSize / MINSIZE_STEP);
+
+        // AD
+        MobileAds.initialize(this);
+        AdView adView = findViewById(R.id.adView);
+        AdRequest adRequest = new AdRequest.Builder().build();
+        adView.loadAd(adRequest);
+
+        adView.setAdListener(new AdListener() {
+            @Override
+            public void onAdLoaded() {
+            }
+
+            @Override
+            public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                super.onAdFailedToLoad(loadAdError);
+                DeployGate.logWarn("onAdFailedToLoad:" + loadAdError.toString());
+            }
+        });
     }
 }
 
