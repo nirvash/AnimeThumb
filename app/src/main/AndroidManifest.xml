@@ -13,11 +13,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <activity
+            android:name=".LicenseActivity"
+            android:exported="true" />
+
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-6635080935379327~2739218218"/>
+            android:value="ca-app-pub-6635080935379327~2739218218" />
 
-        <receiver android:name=".AnimeThumbAppWidget"
+        <receiver
+            android:name=".AnimeThumbAppWidget"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -28,7 +33,8 @@
                 android:resource="@xml/anime_thumb_app_widget_info" />
         </receiver>
 
-        <activity android:name=".AnimeThumbAppWidgetConfigureActivity"
+        <activity
+            android:name=".AnimeThumbAppWidgetConfigureActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />

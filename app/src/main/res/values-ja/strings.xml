@@ -4,6 +4,10 @@
     <string name="config_ok">OK</string>
     <string name="configure">設定</string>
     <string name="config_enable_debug">デバッグモード</string>
-    <string name="config_enable_face_detect">顔認識</string>
+    <string name="config_enable_face_detect">アニメ顔認識</string>
     <string name="label_size">最小認識サイズ</string>
+    <string name="view_licence">ライセンス表示</string>
+    <string name="request_warning">READ_EXTERNAL_STORAGE のパーミッションがないと画像を表示できません</string>
+    <string name="label_scale">顔領域の大きさ</string>
+    <string name="label_version">バージョン情報</string>
 </resources>

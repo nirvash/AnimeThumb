@@ -4,12 +4,13 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="..\:/Dev/AnimeThumb/app/src/main/res/layout/anime_thumb_app_widget_configure.xml" value="0.136" />
+        <entry key="..\:/Dev/AnimeThumb/app/src/main/res/layout/licence_view.xml" value="0.1" />
       </map>
     </option>
   </component>
   <component name="NullableNotNullManager">
     <option name="myDefaultNullable" value="android.support.annotation.Nullable" />
-    <option name="myDefaultNotNull" value="android.support.annotation.NonNull" />
+    <option name="myDefaultNotNull" value="androidx.annotation.NonNull" />
     <option name="myNullables">
       <value>
         <list size="14">

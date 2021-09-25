@@ -45,13 +45,17 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     public static final String ACTION_WIDGET_UPDATE = "nirvash.animethumb.ACTION_WIDGET_UPDATE";
     public static final String ACTION_UPDATE = "nirvash.animethumb.ACTION_UPDATE";
 
-    private static boolean mIsOpenCvInitialized = false;
+    // private static boolean mIsOpenCvInitialized = false;
     static private FaceCrop mFaceCropCache = null;
     static private Uri mFaceCropCacheUri = null;
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
-                                int appWidgetId) {
+                                int appWidgetId, boolean clearCache) {
         // Construct the RemoteViews object
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.anime_thumb_app_widget);
+        if (clearCache) {
+            mFaceCropCache = null;
+            mFaceCropCacheUri = null;
+        }
 
         Uri uri = getMediaImageUri(context);
         BitmapWrapper bitmap = getMediaImage(uri, context, appWidgetId);
@@ -250,7 +254,12 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 if (mFaceCropCacheUri != null && mFaceCropCacheUri.equals(uri)) {
                     crop = mFaceCropCache;
                 } else {
-                    crop = new FaceCrop(height, 300, 300, enableDebug(context, widgetId), getMinDetectSize(context, widgetId));
+                    crop = new FaceCrop(height,
+                            300,
+                            300,
+                            enableDebug(context, widgetId),
+                            getMinDetectSize(context, widgetId),
+                            getFaceScale(context, widgetId));
                 }
                 Rect rect = crop.getFaceRect(bitmap);
                 if (crop.isSuccess()) {
@@ -413,7 +422,11 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     }
 
     private static int getMinDetectSize(Context context, int widgetId) {
-        return AnimeThumbAppWidgetConfigureActivity.loadPrefInt(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_MIN_DETECT_SIZE);
+        return AnimeThumbAppWidgetConfigureActivity.loadPrefInt(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_MIN_DETECT_SIZE, 100);
+    }
+
+    private static int getFaceScale(Context context, int widgetId) {
+        return AnimeThumbAppWidgetConfigureActivity.loadPrefInt(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_FACE_SCALE, 100);
     }
 
 
@@ -427,7 +440,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
         // There may be multiple widgets active, so update all of them
         for (int appWidgetId : appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId);
+            updateAppWidget(context, appWidgetManager, appWidgetId, false);
         }
     }
 
@@ -454,7 +467,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             return;
         }
 
-        updateAppWidget(context, appWidgetManager, appWidgetId);
+        updateAppWidget(context, appWidgetManager, appWidgetId, true);
     }
 }
 

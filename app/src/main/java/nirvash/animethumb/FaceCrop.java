@@ -44,9 +44,10 @@ public class FaceCrop {
     private float mHeight;
     private boolean mEnableDebug;
     private int mMinDetectSize;
+    private int mFaceScale;
 
     private Rect mRect;
-    private List<Rect> mRects = new ArrayList<>();
+    private final List<Rect> mRects = new ArrayList<>();
     private int mColor = Color.MAGENTA;
     private boolean mIsFace = false;
 
@@ -135,12 +136,13 @@ public class FaceCrop {
         return detector;
     }
 
-    public FaceCrop(int maxHeight, float w, float h, boolean enableDebug, int minDetectSize) {
+    public FaceCrop(int maxHeight, float w, float h, boolean enableDebug, int minDetectSize, int faceScale) {
         this.mMaxHeight = maxHeight;
         this.mWidth = w;
         this.mHeight = h;
         this.mEnableDebug = enableDebug;
         this.mMinDetectSize = minDetectSize;
+        this.mFaceScale = faceScale;
     }
 
     private static BitmapWrapper drawFaceRegions(List<Rect> rects, BitmapWrapper image, int color) {
@@ -261,6 +263,12 @@ public class FaceCrop {
                 mColor = conf.color;
                 Rect ret = getFaceRectImpl(imageMat, conf, scale);
                 if (ret != null) {
+                    int xoffset = ret.width * (mFaceScale - 100) / 100 / 2;
+                    ret.x -= xoffset;
+                    ret.width += xoffset * 2;
+                    int yoffset = ret.height * (mFaceScale - 100) / 100 / 2;
+                    ret.y -= yoffset;
+                    ret.height += yoffset * 2;
                     return ret;
                 }
             }
@@ -324,11 +332,11 @@ public class FaceCrop {
                         r.x = (int)mWidth - r.x - r.width;
                     }
                     if (r.x < 0) {
-                        DeployGate.logWarn(String.format("getFaceRectImpl: r %s -> %s, scale %f, angle %f, flip %b", tmp.toString(), r.toString(), scale, conf.angle, conf.flip));
+                        DeployGate.logDebug(String.format("getFaceRectImpl: r %s -> %s, scale %f, angle %f, flip %b", tmp.toString(), r.toString(), scale, conf.angle, conf.flip));
                         r.x = 0;
                     }
                     if (r.y < 0) {
-                        DeployGate.logWarn(String.format("getFaceRectImpl: r %s -> %s, scale %f, angle %f, flip %b", tmp.toString(), r.toString(), scale, conf.angle, conf.flip));
+                        DeployGate.logDebug(String.format("getFaceRectImpl: r %s -> %s, scale %f, angle %f, flip %b", tmp.toString(), r.toString(), scale, conf.angle, conf.flip));
                         r.y = 0;
                     }
                 }
@@ -645,7 +653,7 @@ public class FaceCrop {
     public static FaceCrop get(String imageUri, int maxHeight, float w, float h) {
         FaceCrop faceCrop = sFaceInfoMap.get(imageUri);
         if (faceCrop == null) {
-            faceCrop = new FaceCrop(maxHeight, w, h, false, 100);
+            faceCrop = new FaceCrop(maxHeight, w, h, false, 100, 100);
             sFaceInfoMap.put(imageUri, faceCrop);
         }
         return faceCrop;

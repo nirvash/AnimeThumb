@@ -2,7 +2,11 @@
     <string name="app_name">AnimeThumb</string>
     <string name="configure">Configure</string>
     <string name="config_ok">OK</string>
-    <string name="label_size">Miniumu detect size</string>
+    <string name="label_size">Min detect size</string>
     <string name="config_enable_debug">Enable debug</string>
-    <string name="config_enable_face_detect">Enable face detect</string>
+    <string name="config_enable_face_detect">Enable anime face detect</string>
+    <string name="view_licence">View Licence</string>
+    <string name="request_warning">READ_EXTERNAL_STORAGE permission is required to show pictures.</string>
+    <string name="label_scale">Scale of face area</string>
+    <string name="label_version">Version</string>
 </resources>
