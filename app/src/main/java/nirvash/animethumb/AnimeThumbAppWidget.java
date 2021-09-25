@@ -203,7 +203,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             int index = 0;
             while (cursor.moveToNext() && index < 10) {
                 @SuppressLint("Range") long id = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media._ID));
-                @SuppressLint("Range") Long date = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media.DATE_MODIFIED));
+                @SuppressLint("Range") Long date = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media.DATE_ADDED));
                 Uri mediaUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
                 result.add(new MediaInfo(mediaUri, date));
                 index++;
