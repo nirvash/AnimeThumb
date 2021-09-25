@@ -49,10 +49,11 @@ def getVersionName = { ->
     }
 }
 
-
 allprojects {
-    def version = getVersionName()
-    println "version=$version"
+    ext {
+        versionName = getVersionName()
+        versionCode = getVersionCode()
+    }
 
     repositories {
         google()
