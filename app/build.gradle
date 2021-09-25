@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 apply plugin: 'deploygate'
 apply plugin: 'com.cookpad.android.plugin.license-tools'
 
-println "version=$versionName"
+println "versionCode=$versionCode, versionName=$versionName"
 
 android {
     defaultConfig {
