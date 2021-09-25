@@ -9,4 +9,5 @@
     <string name="request_warning">READ_EXTERNAL_STORAGE permission is required to show pictures.</string>
     <string name="label_scale">Scale of face area</string>
     <string name="label_version">Version</string>
+    <string name="label_image_index">Image index</string>
 </resources>

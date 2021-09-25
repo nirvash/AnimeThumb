@@ -10,4 +10,5 @@
     <string name="request_warning">READ_EXTERNAL_STORAGE のパーミッションがないと画像を表示できません</string>
     <string name="label_scale">顔領域の大きさ</string>
     <string name="label_version">バージョン情報</string>
+    <string name="label_image_index">表示画像インデックス</string>
 </resources>

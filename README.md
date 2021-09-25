@@ -7,4 +7,11 @@
   * See https://www.youtube.com/watch?v=psoeNfFAKL8&ab_channel=Ancode
   * Copy OpenCV-android-sdk/sdk to AnimeThumb (rename sdk to opencv)
 ## Debug
-* Run/Debug COnfigurations > app > Launch Options : Nothing
+* Run/Debug Configurations > app > Launch Options : Nothing
+
+## Workflow
+* Select emulator > Run > Drop widget & test
+* Commit & Push
+* git tag x.x.x
+* Build > Generate Signed Bundle > release
+* Upload bundle to store

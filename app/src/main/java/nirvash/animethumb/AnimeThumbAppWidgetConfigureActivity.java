@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.EditText;
@@ -44,6 +45,7 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
     public static final String KEY_ENABLE_FACE_DETECT = "enable_face_detect";
     public static final String KEY_MIN_DETECT_SIZE = "min_detect_size";
     public static final String KEY_FACE_SCALE = "face_scale";
+    public static final String KEY_IMAGE_INDEX = "image_index";
 
     int mAppWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
 
@@ -51,8 +53,7 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
     SwitchMaterial mEnableFaceDetect;
     TextView mFaceScale;
     SeekBar mSeekBarScale;
-    EditText mMinDetectSize;
-    SeekBar mSeekBar;
+    TextView mImageIndex;
     boolean mFromApp = false;
 
     View.OnClickListener mOnClickListener = new View.OnClickListener() {
@@ -66,11 +67,11 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
             boolean enableFaceDetect = mEnableFaceDetect.isChecked();
             savePref(context, mAppWidgetId, KEY_ENABLE_FACE_DETECT, enableFaceDetect);
 
-            int minDetectSize = Integer.parseInt(mMinDetectSize.getText().toString());
-            savePref(context, mAppWidgetId, KEY_MIN_DETECT_SIZE, minDetectSize);
-
             int faceScale = mSeekBarScale.getProgress() * 10;
             savePref(context, mAppWidgetId, KEY_FACE_SCALE, faceScale);
+
+            int imageIndex = Integer.parseInt(mImageIndex.getText().toString());
+            savePref(context, mAppWidgetId, KEY_IMAGE_INDEX, imageIndex);
 
             // It is the responsibility of the configuration activity to update the app widget
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
@@ -90,13 +91,13 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
 
     // Write the prefix to the SharedPreferences object for this widget
     static void savePref(Context context, int appWidgetId, String key, boolean value) {
-        SharedPreferences.Editor prefs = context.getSharedPreferences(PREFS_NAME, 0).edit();
+        SharedPreferences.Editor prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_MULTI_PROCESS).edit();
         prefs.putBoolean(PREF_PREFIX_KEY + appWidgetId + key, value);
         prefs.apply();
     }
 
     static void savePref(Context context, int appWidgetId, String key, int value) {
-        SharedPreferences.Editor prefs = context.getSharedPreferences(PREFS_NAME, 0).edit();
+        SharedPreferences.Editor prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_MULTI_PROCESS).edit();
         prefs.putInt(PREF_PREFIX_KEY + appWidgetId + key, value);
         prefs.apply();
     }
@@ -105,22 +106,23 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
     // Read the prefix from the SharedPreferences object for this widget.
     // If there is no preference saved, get the default from a resource
     static boolean loadPrefBoolean(Context context, int appWidgetId, String key, boolean defaultValue) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, 0);
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_MULTI_PROCESS);
         return prefs.getBoolean(PREF_PREFIX_KEY + appWidgetId + key, defaultValue);
     }
 
     static int loadPrefInt(Context context, int appWidgetId, String key, int defaultValue) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, 0);
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_MULTI_PROCESS);
         return prefs.getInt(PREF_PREFIX_KEY + appWidgetId + key, defaultValue);
     }
 
 
     static void deletePref(Context context, int appWidgetId) {
-        SharedPreferences.Editor prefs = context.getSharedPreferences(PREFS_NAME, 0).edit();
+        SharedPreferences.Editor prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_MULTI_PROCESS).edit();
         prefs.remove(PREF_PREFIX_KEY + appWidgetId + KEY_ENABLE_DEBUG);
         prefs.remove(PREF_PREFIX_KEY + appWidgetId + KEY_ENABLE_FACE_DETECT);
         prefs.remove(PREF_PREFIX_KEY + appWidgetId + KEY_MIN_DETECT_SIZE);
         prefs.remove(PREF_PREFIX_KEY + appWidgetId + KEY_FACE_SCALE);
+        prefs.remove(PREF_PREFIX_KEY + appWidgetId + KEY_IMAGE_INDEX);
         prefs.apply();
     }
 
@@ -153,7 +155,7 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_PERMISSION) {
             if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
@@ -180,6 +182,10 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
         final int MINSIZE_MAX = 300;
         final int MINSIZE_STEP = 10;
 
+        int minSize = loadPrefInt(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_MIN_DETECT_SIZE, 100);
+        int scale = loadPrefInt(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_FACE_SCALE, 100);
+        int imageIndex = loadPrefInt(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_IMAGE_INDEX, 0);
+
         // Set the result to CANCELED.  This will cause the widget host to cancel
         // out of the widget placement if the user presses the back button.
         setResult(RESULT_CANCELED);
@@ -190,11 +196,25 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
 
         mEnableDebug = findViewById(R.id.switchEnableDebug);
         mEnableFaceDetect = findViewById(R.id.switchEnableFaceDetect);
-        mMinDetectSize = findViewById(R.id.editTextSize);
-        mSeekBar = findViewById(R.id.seekBar);
-        mSeekBar.setMax(MINSIZE_MAX / MINSIZE_STEP);
+        mImageIndex = findViewById(R.id.textViewImageIndex);
         mFaceScale = findViewById(R.id.editTextScale);
         mSeekBarScale = findViewById(R.id.seekBarScale);
+
+        findViewById(R.id.layoutImageIndex).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                ImageIndexPickerDialogFragment fragment = ImageIndexPickerDialogFragment.newInstance(
+                        getResources().getString(R.string.label_image_index), Integer.parseInt(mImageIndex.getText().toString()));
+                fragment.show(getSupportFragmentManager(), "pickerDialog" );
+            }
+        });
+
+        mEnableDebug.setChecked(loadPrefBoolean(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_DEBUG, false));
+        mEnableFaceDetect.setChecked(loadPrefBoolean(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_FACE_DETECT, true));
+        mFaceScale.setText(scale + "%");
+        mImageIndex.setText(String.valueOf(imageIndex));
+
+        mSeekBarScale.setProgress(scale / MINSIZE_STEP);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             mSeekBarScale.setMin(5);
         }
@@ -231,53 +251,6 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
             }
         });
 
-        mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) {
-                    if (progress >= 0 && progress <= seekBar.getMax()) {
-                        String value = String.valueOf(progress * MINSIZE_STEP);
-                        if (!mFromApp) {
-                            mMinDetectSize.setText(value);
-                        }
-                    }
-                    mFromApp = false;
-                }
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
-        });
-
-        mMinDetectSize.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                mFromApp = true;
-                try {
-                    int progress = Integer.parseInt(s.toString());
-                    mSeekBar.setProgress(progress / MINSIZE_STEP);
-                } catch (Exception e) {
-                    // NOP
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-            }
-        });
-
-
-
         // Find the widget id from the intent.
         Intent intent = getIntent();
         Bundle extras = intent.getExtras();
@@ -291,16 +264,6 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
             finish();
             return;
         }
-
-        int minSize = loadPrefInt(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_MIN_DETECT_SIZE, 100);
-        int scale = loadPrefInt(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_FACE_SCALE, 100);
-
-        mEnableDebug.setChecked(loadPrefBoolean(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_DEBUG, false));
-        mEnableFaceDetect.setChecked(loadPrefBoolean(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_FACE_DETECT, true));
-        mFaceScale.setText(scale + "%");
-        mMinDetectSize.setText(Integer.toString(minSize));
-        mSeekBarScale.setProgress(scale / MINSIZE_STEP);
-        mSeekBar.setProgress(minSize / MINSIZE_STEP);
 
         // AD
         MobileAds.initialize(this);
@@ -319,6 +282,10 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
                 DeployGate.logWarn("onAdFailedToLoad:" + loadAdError.toString());
             }
         });
+    }
+
+    public void onImageIndexPicked(int value) {
+        mImageIndex.setText(String.valueOf(value));
     }
 }
 

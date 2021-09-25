@@ -34,6 +34,9 @@ import org.opencv.core.Rect;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Implementation of App Widget functionality.
@@ -57,7 +60,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             mFaceCropCacheUri = null;
         }
 
-        Uri uri = getMediaImageUri(context);
+        Uri uri = getMediaImageUri(context, appWidgetId);
         BitmapWrapper bitmap = getMediaImage(uri, context, appWidgetId);
         if (uri != null) {
             if (bitmap != null) {
@@ -154,7 +157,8 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         super.onReceive(context, intent);
 
         if (ACTION_WIDGET_UPDATE.equals(intent.getAction())) {
-            Uri uri = getMediaImageUri(context);
+            int appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0);
+            Uri uri = getMediaImageUri(context, appWidgetId);
             Intent launchIntent = new Intent(Intent.ACTION_VIEW, uri);
             launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(launchIntent);
@@ -190,16 +194,19 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         }
     }
 
-    private static MediaInfo getMediaInfo(Context context, Uri uri) {
+    private static List<MediaInfo> getMediaInfo(Context context, Uri uri) {
         Cursor cursor = null;
+        List<MediaInfo> result = new ArrayList<>();
         try {
             String order =  MediaStore.Images.Media.DATE_MODIFIED + " DESC";
             cursor = context.getContentResolver().query(uri, null, null, null, order);
-            if (cursor.moveToNext()) {
+            int index = 0;
+            while (cursor.moveToNext() && index < 10) {
                 @SuppressLint("Range") long id = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media._ID));
                 @SuppressLint("Range") Long date = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media.DATE_MODIFIED));
                 Uri mediaUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
-                return new MediaInfo(mediaUri, date);
+                result.add(new MediaInfo(mediaUri, date));
+                index++;
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -208,14 +215,29 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                 cursor.close();
             }
         }
-        return new MediaInfo();
+        return result;
     }
 
-    private static Uri getMediaImageUri(Context context) {
-        MediaInfo externalInfo = getMediaInfo(context, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        MediaInfo internalInfo = getMediaInfo(context, MediaStore.Images.Media.INTERNAL_CONTENT_URI);
+    private static Uri getMediaImageUri(Context context, int widgetId) {
+        try {
+            List<MediaInfo> mediaList1 = getMediaInfo(context, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            List<MediaInfo> mediaList2 = getMediaInfo(context, MediaStore.Images.Media.INTERNAL_CONTENT_URI);
 
-        return externalInfo.date > internalInfo.date ? externalInfo.uri : internalInfo.uri;
+            mediaList1.addAll(mediaList2);
+            Collections.sort(mediaList1, (media1, media2) -> media1.date > media2.date ? -1 : media1.date.equals(media2.date) ? 0 : -1);
+
+            int imageIndex = getImageIndex(context, widgetId);
+            if (mediaList1.size() < imageIndex) {
+                imageIndex = mediaList1.size() - 1;
+            }
+            if (mediaList1.isEmpty()) {
+                return null;
+            }
+            return mediaList1.get(imageIndex).uri;
+        } catch (Exception e) {
+            DeployGate.logWarn("getMediaImageUri:" + e.getMessage());
+            return null;
+        }
     }
 
 
@@ -427,6 +449,10 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
     private static int getFaceScale(Context context, int widgetId) {
         return AnimeThumbAppWidgetConfigureActivity.loadPrefInt(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_FACE_SCALE, 100);
+    }
+
+    private static int getImageIndex(Context context, int widgetId) {
+        return AnimeThumbAppWidgetConfigureActivity.loadPrefInt(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_IMAGE_INDEX, 0);
     }
 
 
