@@ -179,6 +179,20 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
 
     @SuppressLint("SetTextI18n")
     void initialProcess() {
+        // Find the widget id from the intent.
+        Intent intent = getIntent();
+        Bundle extras = intent.getExtras();
+        if (extras != null) {
+            mAppWidgetId = extras.getInt(
+                    AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
+        }
+
+        // If this activity was started with an intent without an app widget ID, finish with an error.
+        if (mAppWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            finish();
+            return;
+        }
+
         final int MINSIZE_MAX = 300;
         final int MINSIZE_STEP = 10;
 
@@ -250,20 +264,6 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
                 startActivity(new Intent(context, LicenseActivity.class));
             }
         });
-
-        // Find the widget id from the intent.
-        Intent intent = getIntent();
-        Bundle extras = intent.getExtras();
-        if (extras != null) {
-            mAppWidgetId = extras.getInt(
-                    AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
-        }
-
-        // If this activity was started with an intent without an app widget ID, finish with an error.
-        if (mAppWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
-            finish();
-            return;
-        }
 
         // AD
         MobileAds.initialize(this);

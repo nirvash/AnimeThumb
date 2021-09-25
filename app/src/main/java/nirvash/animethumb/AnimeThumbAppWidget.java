@@ -224,7 +224,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             List<MediaInfo> mediaList2 = getMediaInfo(context, MediaStore.Images.Media.INTERNAL_CONTENT_URI);
 
             mediaList1.addAll(mediaList2);
-            Collections.sort(mediaList1, (media1, media2) -> media1.date > media2.date ? -1 : media1.date.equals(media2.date) ? 0 : -1);
+            Collections.sort(mediaList1, (media1, media2) -> (int) (media2.date - media1.date));
 
             int imageIndex = getImageIndex(context, widgetId);
             if (mediaList1.size() < imageIndex) {
