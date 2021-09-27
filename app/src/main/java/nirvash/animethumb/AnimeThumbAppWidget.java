@@ -35,6 +35,7 @@ import org.opencv.core.Rect;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -75,8 +76,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             views.setImageViewResource(R.id.imageView, R.mipmap.ic_launcher_round);
         }
 
-
-        Intent intent = new Intent(context, AnimeThumbAppWidget.class);
+        Intent intent = new Intent();
         intent.setAction(ACTION_WIDGET_UPDATE);
         intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
         @SuppressLint("UnspecifiedImmutableFlag") PendingIntent pendingIntent = PendingIntent.getBroadcast(context, appWidgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
@@ -172,11 +172,14 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
     static public void broadcastUpdate(Context context) {
         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-        ComponentName component = new ComponentName(context, AnimeThumbAppWidget.class);
-        int[] appWidgetIds = appWidgetManager.getAppWidgetIds(component);
-        Intent update = new Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-        update.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds);
-        context.sendBroadcast(update);
+        Class<?>[] classes = {AnimeThumbAppWidget.class, AnimeThumbAppWidget_2x2.class};
+        for (int i=0; i<classes.length; i++) {
+            ComponentName component = new ComponentName(context, classes[i]);
+            int[] appWidgetIds = appWidgetManager.getAppWidgetIds(component);
+            Intent update = new Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+            update.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds);
+            context.sendBroadcast(update);
+        }
     }
 
     static class MediaInfo {
@@ -460,7 +463,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         Log.d(TAG, "onUpdate:");
         if (!OpenCVWrapper.initialize(context)) {
-            Log.d(TAG, "onUpdate: opencv is not initaialized");
+            Log.d(TAG, "onUpdate: opencv is not initialized");
             return;
         }
 

@@ -26,7 +26,7 @@ public class MediaStoreObserver extends ContentObserver {
     @Override
     public void onChange(boolean selfChange) {
         super.onChange(selfChange);
-        Log.d(TAG, "onChage");
+        Log.d(TAG, "onChange");
 
         if (mContext != null) {
 /*            Intent intent = new Intent(mContext, AnimeThumbAppWidget.class);
