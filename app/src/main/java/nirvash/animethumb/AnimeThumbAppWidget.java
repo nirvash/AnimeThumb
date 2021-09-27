@@ -76,7 +76,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             views.setImageViewResource(R.id.imageView, R.mipmap.ic_launcher_round);
         }
 
-        Intent intent = new Intent();
+        Intent intent = new Intent(context, AnimeThumbAppWidget.class);
         intent.setAction(ACTION_WIDGET_UPDATE);
         intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
         @SuppressLint("UnspecifiedImmutableFlag") PendingIntent pendingIntent = PendingIntent.getBroadcast(context, appWidgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
