@@ -64,6 +64,7 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
 
     View.OnClickListener mOnClickListener = new View.OnClickListener() {
         public void onClick(View v) {
+            applyConfig();
             finish();
         }
     };
@@ -355,13 +356,6 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
     public void onImageIndexPicked(int value) {
         mImageIndex.setText(String.valueOf(value));
         updatePreview();
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        toastMake("onStop", 0, 0);
-        applyConfig();
     }
 }
 
