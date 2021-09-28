@@ -2,20 +2,20 @@ package nirvash.animethumb;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.util.Log;
+import android.os.Handler;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.EditText;
+import android.widget.CompoundButton;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -32,6 +32,11 @@ import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.LoadAdError;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.material.switchmaterial.SwitchMaterial;
+
+import org.opencv.core.Rect;
+
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * The configuration screen for the {@link AnimeThumbAppWidget AnimeThumbAppWidget} AppWidget.
@@ -54,36 +59,40 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
     TextView mFaceScale;
     SeekBar mSeekBarScale;
     TextView mImageIndex;
+    ImageView mImagePreview;
     boolean mFromApp = false;
 
     View.OnClickListener mOnClickListener = new View.OnClickListener() {
         public void onClick(View v) {
-            final Context context = AnimeThumbAppWidgetConfigureActivity.this;
-
-            // When the button is clicked, store the string locally
-            boolean enableDebug = mEnableDebug.isChecked();
-            savePref(context, mAppWidgetId, KEY_ENABLE_DEBUG, enableDebug);
-
-            boolean enableFaceDetect = mEnableFaceDetect.isChecked();
-            savePref(context, mAppWidgetId, KEY_ENABLE_FACE_DETECT, enableFaceDetect);
-
-            int faceScale = mSeekBarScale.getProgress() * 10;
-            savePref(context, mAppWidgetId, KEY_FACE_SCALE, faceScale);
-
-            int imageIndex = Integer.parseInt(mImageIndex.getText().toString());
-            savePref(context, mAppWidgetId, KEY_IMAGE_INDEX, imageIndex);
-
-            // It is the responsibility of the configuration activity to update the app widget
-            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-            AnimeThumbAppWidget.updateAppWidget(context, appWidgetManager, mAppWidgetId, true);
-
-            // Make sure we pass back the original appWidgetId
-            Intent resultValue = new Intent();
-            resultValue.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mAppWidgetId);
-            setResult(RESULT_OK, resultValue);
             finish();
         }
     };
+
+    private void applyConfig() {
+        final Context context = AnimeThumbAppWidgetConfigureActivity.this;
+
+        // When the button is clicked, store the string locally
+        boolean enableDebug = mEnableDebug.isChecked();
+        savePref(context, mAppWidgetId, KEY_ENABLE_DEBUG, enableDebug);
+
+        boolean enableFaceDetect = mEnableFaceDetect.isChecked();
+        savePref(context, mAppWidgetId, KEY_ENABLE_FACE_DETECT, enableFaceDetect);
+
+        int faceScale = mSeekBarScale.getProgress() * 10;
+        savePref(context, mAppWidgetId, KEY_FACE_SCALE, faceScale);
+
+        int imageIndex = Integer.parseInt(mImageIndex.getText().toString());
+        savePref(context, mAppWidgetId, KEY_IMAGE_INDEX, imageIndex);
+
+        // It is the responsibility of the configuration activity to update the app widget
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+        AnimeThumbAppWidget.updateAppWidget(context, appWidgetManager, mAppWidgetId, true);
+
+        // Make sure we pass back the original appWidgetId
+        Intent resultValue = new Intent();
+        resultValue.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mAppWidgetId);
+        setResult(RESULT_OK, resultValue);
+    }
 
     public AnimeThumbAppWidgetConfigureActivity() {
         super();
@@ -193,6 +202,8 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
             return;
         }
 
+        OpenCVWrapper.initialize(this);
+
         final int MINSIZE_MAX = 300;
         final int MINSIZE_STEP = 10;
 
@@ -213,6 +224,7 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
         mImageIndex = findViewById(R.id.textViewImageIndex);
         mFaceScale = findViewById(R.id.editTextScale);
         mSeekBarScale = findViewById(R.id.seekBarScale);
+        mImagePreview = findViewById(R.id.imageViewPreview);
 
         findViewById(R.id.layoutImageIndex).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -227,6 +239,13 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
         mEnableFaceDetect.setChecked(loadPrefBoolean(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_ENABLE_FACE_DETECT, true));
         mFaceScale.setText(scale + "%");
         mImageIndex.setText(String.valueOf(imageIndex));
+
+        mEnableFaceDetect.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                updatePreview();
+            }
+        });
 
         mSeekBarScale.setProgress(scale / MINSIZE_STEP);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -253,10 +272,11 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                updatePreview();
             }
         });
 
-        findViewById(R.id.add_button).setOnClickListener(mOnClickListener);
+        findViewById(R.id.apply_button).setOnClickListener(mOnClickListener);
         Context context = this;
         findViewById(R.id.license_button).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -282,10 +302,66 @@ public class AnimeThumbAppWidgetConfigureActivity extends AppCompatActivity {
                 DeployGate.logWarn("onAdFailedToLoad:" + loadAdError.toString());
             }
         });
+
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                updatePreview();
+            }
+        }, 100);
+
+    }
+
+    private void updatePreview() {
+        int imageIndex = Integer.parseInt(mImageIndex.getText().toString());
+        Uri uri = FaceDetectUtil.getMediaImageUri(this, mAppWidgetId, imageIndex);
+        if (uri != null) {
+            Bitmap bitmap = FaceDetectUtil.getBitmap(uri, this);
+            if (bitmap != null && mEnableFaceDetect.isChecked()) {
+                int minSize = loadPrefInt(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_MIN_DETECT_SIZE, 100);
+                int faceScale = mSeekBarScale.getProgress() * 10;int scale = loadPrefInt(AnimeThumbAppWidgetConfigureActivity.this, mAppWidgetId, KEY_FACE_SCALE, 100);
+
+                FaceCrop crop = new FaceCrop(
+                        mImagePreview.getHeight(),
+                        mImagePreview.getWidth(), mImagePreview.getHeight(),
+                        mEnableDebug.isChecked(),
+                        minSize, faceScale);
+                Rect rect = crop.getFaceRect(bitmap);
+                if (crop.isSuccess()) {
+                  FaceDetectUtil.adjustRect(rect, mImagePreview.getWidth(), mImagePreview.getHeight(),
+                          bitmap.getWidth(), bitmap.getHeight());
+                  if (rect.x >= 0 && rect.y >= 0 && rect.width > 0 && rect.height > 0) {
+                      bitmap = Bitmap.createBitmap(bitmap, rect.x, rect.y, rect.width, rect.height);
+                  }
+                } else {
+                    float bitmapAspect = (float)bitmap.getHeight() / (float)bitmap.getWidth();
+                    if (bitmapAspect > 0.5f && bitmap.getHeight() > mImagePreview.getHeight()) {
+                        float rate = bitmapAspect > 1.5f ? 0.4f : 0.6f;
+                        int h = (int)(bitmap.getHeight() * rate);
+                        if (h / (float)bitmap.getWidth() > (float)mImagePreview.getHeight() / (float)mImagePreview.getWidth()) {
+                            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), h);
+                        }
+                    }
+                }
+            }
+            if (bitmap != null) {
+                mImagePreview.setImageBitmap(bitmap);
+            } else {
+                mImagePreview.setImageResource(R.drawable.example_appwidget_preview);
+            }
+        }
     }
 
     public void onImageIndexPicked(int value) {
         mImageIndex.setText(String.valueOf(value));
+        updatePreview();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        toastMake("onStop", 0, 0);
+        applyConfig();
     }
 }
 

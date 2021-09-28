@@ -5,39 +5,23 @@ import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
-import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.ImageDecoder;
-import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.widget.RemoteViews;
 
-import androidx.annotation.NonNull;
-import androidx.exifinterface.media.ExifInterface;
-
 import com.deploygate.sdk.DeployGate;
 
 import org.opencv.core.Rect;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Implementation of App Widget functionality.
@@ -52,6 +36,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     // private static boolean mIsOpenCvInitialized = false;
     static private FaceCrop mFaceCropCache = null;
     static private Uri mFaceCropCacheUri = null;
+
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
                                 int appWidgetId, boolean clearCache) {
         // Construct the RemoteViews object
@@ -61,7 +46,8 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
             mFaceCropCacheUri = null;
         }
 
-        Uri uri = getMediaImageUri(context, appWidgetId);
+        int imageIndex = getImageIndex(context, appWidgetId);
+        Uri uri = FaceDetectUtil.getMediaImageUri(context, appWidgetId, imageIndex);
         BitmapWrapper bitmap = getMediaImage(uri, context, appWidgetId);
         if (uri != null) {
             if (bitmap != null) {
@@ -92,7 +78,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
 
-    private static BitmapWrapper clipCorner(BitmapWrapper bitmap) {
+    public static BitmapWrapper clipCorner(BitmapWrapper bitmap) {
         Bitmap dst = Bitmap.createBitmap((int)bitmap.getWidth(), (int)bitmap.getHeight(), Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(dst);
         Paint paint = new Paint();
@@ -110,7 +96,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     }
 
     // Widget の大きさに合わせてクロップを行う
-    private static BitmapWrapper cropImage(BitmapWrapper bitmap, Context context, int widgetId) {
+    public static BitmapWrapper cropImage(BitmapWrapper bitmap, Context context, int widgetId) {
         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
         Bundle options = appWidgetManager.getAppWidgetOptions(widgetId);
         int width = getWidth(context, options);
@@ -158,7 +144,8 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
 
         if (ACTION_WIDGET_UPDATE.equals(intent.getAction())) {
             int appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0);
-            Uri uri = getMediaImageUri(context, appWidgetId);
+            int imageIndex = getImageIndex(context, appWidgetId);
+            Uri uri = FaceDetectUtil.getMediaImageUri(context, appWidgetId, imageIndex);
             Intent launchIntent = new Intent(Intent.ACTION_VIEW, uri);
             launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(launchIntent);
@@ -197,75 +184,11 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         }
     }
 
-    private static List<MediaInfo> getMediaInfo(Context context, Uri uri) {
-        Cursor cursor = null;
-        List<MediaInfo> result = new ArrayList<>();
-        try {
-            String order =  MediaStore.Images.Media.DATE_MODIFIED + " DESC";
-            cursor = context.getContentResolver().query(uri, null, null, null, order);
-            int index = 0;
-            while (cursor.moveToNext() && index < 10) {
-                @SuppressLint("Range") long id = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media._ID));
-                @SuppressLint("Range") Long date = cursor.getLong(cursor.getColumnIndex(MediaStore.Images.Media.DATE_ADDED));
-                Uri mediaUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id);
-                result.add(new MediaInfo(mediaUri, date));
-                index++;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
-        }
-        return result;
-    }
-
-    private static Uri getMediaImageUri(Context context, int widgetId) {
-        try {
-            List<MediaInfo> mediaList1 = getMediaInfo(context, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-            List<MediaInfo> mediaList2 = getMediaInfo(context, MediaStore.Images.Media.INTERNAL_CONTENT_URI);
-
-            mediaList1.addAll(mediaList2);
-            Collections.sort(mediaList1, (media1, media2) -> (int) (media2.date - media1.date));
-
-            int imageIndex = getImageIndex(context, widgetId);
-            if (mediaList1.size() < imageIndex) {
-                imageIndex = mediaList1.size() - 1;
-            }
-            if (mediaList1.isEmpty()) {
-                return null;
-            }
-            return mediaList1.get(imageIndex).uri;
-        } catch (Exception e) {
-            DeployGate.logWarn("getMediaImageUri:" + e.getMessage());
-            return null;
-        }
-    }
-
 
     @SuppressLint("DefaultLocale")
-    private static BitmapWrapper getMediaImage(Uri uri, Context context, int widgetId) {
+    public static BitmapWrapper getMediaImage(Uri uri, Context context, int widgetId) {
         if (uri != null) {
-            Bitmap bitmap = null;
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ImageDecoder.Source source = ImageDecoder.createSource(context.getContentResolver(), uri);
-                    ImageDecoder.OnHeaderDecodedListener listener = new ImageDecoder.OnHeaderDecodedListener() {
-                        @Override
-                        public void onHeaderDecoded(@NonNull ImageDecoder imageDecoder, @NonNull ImageDecoder.ImageInfo imageInfo, @NonNull ImageDecoder.Source source) {
-                            imageDecoder.setMutableRequired(true);
-                        }
-                    };
-                    bitmap = ImageDecoder.decodeBitmap(source, listener);
-                } else {
-                    bitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(), uri);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            bitmap = rotateByExifInfo(context, uri, bitmap);
+            Bitmap bitmap = FaceDetectUtil.getBitmap(uri, context);
 
             if (bitmap != null && enableFaceDetect(context, widgetId)) {
                 AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
@@ -295,7 +218,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
                         BitmapWrapper out = crop.drawRegion(new BitmapWrapper(bitmap, false));
                         bitmap = out.getBitmap();
                     }
-                    adjustRect(rect, width, height, bitmap.getWidth(), bitmap.getHeight());
+                    FaceDetectUtil.adjustRect(rect, width, height, bitmap.getWidth(), bitmap.getHeight());
                     if (rect.x >= 0 && rect.y >= 0 && rect.width > 0 && rect.height > 0) {
                         Bitmap cropped = Bitmap.createBitmap(bitmap, rect.x, rect.y, rect.width, rect.height);
                         return new BitmapWrapper(cropped, true);
@@ -324,94 +247,6 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
         return null;
     }
 
-    private static Bitmap rotateByExifInfo(Context context, Uri uri, Bitmap bitmap) {
-        int orientation = getOrientation(context, uri);
-
-        Matrix mat = new Matrix();
-        boolean doRotate = false;
-        switch (orientation) {
-            case ExifInterface.ORIENTATION_ROTATE_90:
-                mat.postRotate(90);
-                doRotate = true;
-                break;
-            case ExifInterface.ORIENTATION_ROTATE_180:
-                mat.postRotate(180);
-                doRotate = true;
-                break;
-            case ExifInterface.ORIENTATION_ROTATE_270:
-                mat.postRotate(270);
-                doRotate = true;
-                break;
-            default:
-                break;
-        }
-
-        if (doRotate) {
-            Bitmap tmp = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), mat, true);
-            bitmap.recycle();
-            bitmap = tmp;
-        }
-
-        return bitmap;
-    }
-
-    private static int getOrientation(Context context, Uri uri) {
-        String[] selections = { MediaStore.Images.Media.DATA };
-        InputStream input = null;
-        try {
-            input = context.getContentResolver().openInputStream(uri);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        int orientation = ExifInterface.ORIENTATION_NORMAL;
-        if (input == null) {
-            return orientation;
-        }
-
-        ExifInterface exifInterface;
-        try {
-            exifInterface = new ExifInterface(input);
-            orientation = exifInterface.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return orientation;
-    }
-
-
-    // ウィジェットのアスペクト比に合わせてクロップ領域を調整
-    private static void adjustRect(Rect rect, int width, int height, int maxWidth, int maxHeight) {
-        float widgetAspect = (float)width / (float) height;
-        float rectAspect = (float)rect.width / (float)rect.height;
-        if (widgetAspect > rectAspect) {
-            int w = (int)(rect.height * widgetAspect);
-            w = Math.min(maxWidth, w);
-            int diff = w - rect.width;
-            if (rect.x < diff / 2) {
-                rect.x = 0;
-            } else {
-                rect.x -= diff / 2;
-            }
-            rect.width = w;
-            if (rect.x + rect.width > maxWidth) {
-                rect.width = maxWidth - rect.x;
-            }
-        } else {
-            int h = (int)(rect.width / widgetAspect);
-            h = Math.min(maxHeight, h);
-            int diff = h - rect.height;
-            if (rect.y < diff / 2) {
-                rect.y = 0;
-            } else {
-                rect.y -= diff / 2;
-            }
-            rect.height = h;
-            if (rect.y + rect.height > maxHeight) {
-                rect.height = maxHeight - rect.y;
-            }
-        }
-    }
 
     private static int getHeight(Context context, Bundle options) {
         String KEY_HEIGHT = isPortrait(context) ?
@@ -457,6 +292,7 @@ public class AnimeThumbAppWidget extends AppWidgetProvider {
     private static int getImageIndex(Context context, int widgetId) {
         return AnimeThumbAppWidgetConfigureActivity.loadPrefInt(context, widgetId, AnimeThumbAppWidgetConfigureActivity.KEY_IMAGE_INDEX, 0);
     }
+
 
 
     @Override
