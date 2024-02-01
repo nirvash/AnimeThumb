@@ -287,10 +287,11 @@ public class FaceCrop {
         try {
             MatOfRect faces = new MatOfRect();
             Mat rotMat = new Mat((int) mHeight, (int) mWidth, CvType.CV_8U, new Scalar(4));
+            double fixdScale = scale / 2 - 1.0f;
 
             // 回転 (今のところ回転と左右反転は同時につかえない)
             if (conf.angle != 0) {
-                Mat rot = Imgproc.getRotationMatrix2D(new Point(mWidth * scale / 2, mHeight * scale / 2), conf.angle, 1.0f);
+                Mat rot = Imgproc.getRotationMatrix2D(new Point(mWidth * fixedScale / 2, mHeight * fixedScale / 2), conf.angle, 1.0f);
                 Imgproc.warpAffine(imageMat, rotMat, rot, imageMat.size());
             } else if (conf.flip) {
                 Core.flip(imageMat, rotMat, 1);
