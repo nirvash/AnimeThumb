@@ -75,11 +75,9 @@ public class FaceCrop {
         if (sFaceDetectorFace == null) {
             sFaceDetectorFace = setupFaceDetector(context, "lbpcascade_frontalface_improved.xml", R.raw.lbpcascade_frontalface_improved);
         }
-/*
         if (sFaceDetector_Cat == null) {
             sFaceDetector_Cat = setupFaceDetector(context, "lbpcascade_cat.xml", R.raw.lbpcascade_cat);
         }
-*/
     }
 
     private static File setupCascadeFile(Context context, String fileName, int xml) {
